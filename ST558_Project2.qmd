@@ -32,10 +32,14 @@ library(purrr)
   # https://fiscaldata.treasury.gov/api-documentation/
   # this is "fed treasury" in the api list
 
+# using this data
+  # https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
+
+
 
 ```
 
-## API query function (see hw4 for example)
+## 1 API query function (see hw4 for example)
 
 ```{r}
 #| warning: FALSE
@@ -44,7 +48,7 @@ library(purrr)
 # define funciton with 6 filter options
 get_revenue_collections_data <- function(record_date = NULL, electronic_category_desc = NULL, channel_type_desc = NULL, tax_category_desc = NULL, 
                                          record_fiscal_year = NULL, record_calendar_year = NULL, record_calendar_month = NULL, 
-                                         format = "json"){
+                                         format = "json", page_number = 1, page_size = 1000){
   
   # set base url and endpoint
   base_url <- 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/'
@@ -68,16 +72,18 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
     build_filter("record_fiscal_year", record_fiscal_year),
     build_filter("record_calendar_year", record_calendar_year),
     build_filter("record_calendar_month", record_calendar_month),
+    `page[number]` = page_number,
+    `page[size]` = page_size,
     format = format
   )
   
   # remove NULL values from query
   query_params <- compact(query_params)
   
-  # Combine the filters into a single string if there are multiple filters
+  # combine the filters into a single string if there are multiple filters
   if (length(query_params) > 1) {
     query_params$filter <- paste(query_params[-length(query_params)], collapse = ",")
-    query_params <- list(filter = query_params$filter, format = query_params$format)
+    query_params <- list(filter = query_params$filter, format = query_params$format, `page[number]` = page_number, `page[size]` = page_size)
   }
   
   # get the data from the API
@@ -89,44 +95,121 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   }
   
   # parse data s tibble
-  data <- url_data %>%
-    httr::content(as = "text") %>%
-    fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) %>%
-    pluck("data") %>%
+  data <- url_data |>
+    httr::content(as = "text") |>
+    fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) |>
+    pluck("data") |>
     as_tibble()
   
   # return the results
   return(data)
 }
 
-# testing @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# testing @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 revenue_data <- get_revenue_collections_data(
   record_date = NULL,
-  electronic_category_desc = "Fully Electronic - All",
+  electronic_category_desc = NULL, #"Fully Electronic - All",
   channel_type_desc = NULL,
   tax_category_desc = NULL,
-  record_fiscal_year = 2020,
+  record_fiscal_year = NULL,
   record_calendar_year = NULL,
   record_calendar_month = NULL
 )
-print(revenue_data)
+dim(revenue_data)
 
 ```
 
+## 2 Data summary functions
 
+### Contingency table
+```{r}
+#| warning: FALSE
+#| message: FALSE
 
+# contingency table
+contingency_table <- revenue_data |>
+  group_by(channel_type_desc) |>
+  drop_na(channel_type_desc) |>
+  summarize(count = n())
 
+# show results
+contingency_table 
 
+```
 
+### Summary statistics
+```{r}
+#| warning: FALSE
+#| message: FALSE
 
+# get summary stats
+numerical_summaries <- revenue_data |>
+  
+  # convert values to numeric
+  mutate(net_collections_amt = as.numeric(net_collections_amt)) |>
+  
+  # group by given field
+  group_by(tax_category_desc) |>
+  
+  # generate summary statistics
+  summarize(
+    value_total = sum(net_collections_amt, na.rm = TRUE),
+    value_avg = mean(net_collections_amt, na.rm = TRUE),
+    value_min = min(net_collections_amt, na.rm = TRUE),
+    value_25th = quantile(net_collections_amt, 0.25, na.rm = TRUE),
+    value_50th = median(net_collections_amt, na.rm = TRUE),
+    value_75th = quantile(net_collections_amt, 0.75, na.rm = TRUE),
+    value_100th = max(net_collections_amt, na.rm = TRUE)
+  )
 
+# show results
+print(numerical_summaries) 
 
+```
 
+### 4 plots
+```{r}
+#| warning: FALSE
+#| message: FALSE
 
+# load library to format dollars
+library(scales)
 
+# convert to numeric for plots
+revenue_data <- revenue_data |>
+  mutate(net_collections_amt = as.numeric(net_collections_amt))
 
+# plot 1: Histogram
+ggplot(revenue_data, aes(x = net_collections_amt)) +
+  geom_histogram(bins = 25, fill = "steelblue", color = "black") +
+  labs(title = "Histogram of Net Collections Amount", x = "Net Collections Amount", y = "Count") +
+  scale_x_continuous(labels = dollar) +
+  theme_minimal()
 
+# violin plot
+ggplot(revenue_data, aes(x = tax_category_desc, y = net_collections_amt)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Net Collections by Tax Category", x = "Tax Category", y = "Net Collections Amount") +
+  scale_y_log10(labels = dollar) +
+  theme_minimal()
 
+# line plot
+ggplot(revenue_data, aes(x = as.factor(record_fiscal_year), y = net_collections_amt, color = tax_category_desc)) +
+  geom_line() +
+  labs(title = "Net Collections Over Time by Tax Category", x = "Fiscal Year", y = "Net Collections Amount") +
+  scale_y_continuous(labels = dollar) +
+  theme_minimal()
+
+# heat map
+heatmap_data <- revenue_data |>
+  count(tax_category_desc, channel_type_desc)
+
+ggplot(heatmap_data, aes(x = tax_category_desc, y = channel_type_desc, fill = n)) +
+  geom_tile() +
+  labs(title = "Heatmap of Tax Category by Channel Type", x = "Tax Category", y = "Channel Type", fill = "Count") +
+  theme_minimal()
+
+```
 
 
 
