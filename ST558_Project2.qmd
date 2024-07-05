@@ -113,9 +113,13 @@ revenue_data <- get_revenue_collections_data(
   tax_category_desc = NULL,
   record_fiscal_year = NULL,
   record_calendar_year = NULL,
-  record_calendar_month = NULL
+  record_calendar_month = NULL,
+  page_number = 1, 
+  page_size = 10000
 )
 dim(revenue_data)
+min(revenue_data$record_date)
+max(revenue_data$record_date)
 
 ```
 
@@ -175,42 +179,59 @@ print(numerical_summaries)
 # load library to format dollars
 library(scales)
 
-# convert to numeric for plots
+# Convert to numeric for plots
 revenue_data <- revenue_data |>
-  mutate(net_collections_amt = as.numeric(net_collections_amt))
+  mutate(
+    net_collections_amt = as.numeric(net_collections_amt),
+    record_calendar_year = as.integer(record_calendar_year),
+    record_calendar_month = as.integer(record_calendar_month)
+  )
 
-# plot 1: Histogram
+# Extract date range and format as "Month YYYY"
+date_range_year <- range(revenue_data$record_calendar_year, na.rm = TRUE)
+date_range_month <- range(revenue_data$record_calendar_month, na.rm = TRUE)
+min_date <- paste(month.name[date_range_month[1]], date_range_year[1])
+max_date <- paste(month.name[date_range_month[2]], date_range_year[2])
+date_range_text <- paste(min_date, "to", max_date)
+
+# Histogram
 ggplot(revenue_data, aes(x = net_collections_amt)) +
-  geom_histogram(bins = 25, fill = "steelblue", color = "black") +
-  labs(title = "Histogram of Net Collections Amount", x = "Net Collections Amount", y = "Count") +
-  scale_x_continuous(labels = dollar) +
+  geom_histogram(bins = 25, fill = "lightgreen", color = "black", alpha = 0.5) +
+  labs(title = paste("Histogram of Net Collections Amount between", date_range_text), x = "Net Collections Amount", y = "Count") +
+  scale_x_log10(labels = dollar) +
   theme_minimal()
 
-# violin plot
+# Boxplot
 ggplot(revenue_data, aes(x = tax_category_desc, y = net_collections_amt)) +
-  geom_boxplot() +
-  labs(title = "Distribution of Net Collections by Tax Category", x = "Tax Category", y = "Net Collections Amount") +
+  geom_boxplot(fill = "lightgreen", color = "black", alpha = 0.5) +
+  labs(title = paste("Distribution of Net Collections by Tax Category between", date_range_text), x = "Tax Category", y = "Net Collections Amount") +
   scale_y_log10(labels = dollar) +
   theme_minimal()
 
-# line plot
-ggplot(revenue_data, aes(x = as.factor(record_fiscal_year), y = net_collections_amt, color = tax_category_desc)) +
-  geom_line() +
-  labs(title = "Net Collections Over Time by Tax Category", x = "Fiscal Year", y = "Net Collections Amount") +
+# Line plot by month
+ggplot(revenue_data, aes(x = as.factor(record_calendar_month), y = net_collections_amt, color = tax_category_desc, group = tax_category_desc)) +
+  stat_summary(fun = sum, geom = "line") +
+  labs(title = paste("Net Collections by Month and Tax Category between", date_range_text), x = "Month", y = "Net Collections Amount") +
   scale_y_continuous(labels = dollar) +
   theme_minimal()
 
-# heat map
-heatmap_data <- revenue_data |>
-  count(tax_category_desc, channel_type_desc)
+# Summarize data for heatmap
+heatmap_data <- revenue_data %>%
+  group_by(tax_category_desc, channel_type_desc) %>%
+  summarize(total_net_collections = sum(net_collections_amt, na.rm = TRUE), .groups = "drop")
 
-ggplot(heatmap_data, aes(x = tax_category_desc, y = channel_type_desc, fill = n)) +
-  geom_tile() +
-  labs(title = "Heatmap of Tax Category by Channel Type", x = "Tax Category", y = "Channel Type", fill = "Count") +
+# Heatmap
+ggplot(heatmap_data, aes(x = tax_category_desc, y = channel_type_desc, fill = total_net_collections)) +
+  geom_tile(alpha = 0.5) +
+  geom_text(aes(label = scales::dollar(total_net_collections)), color = "black", size = 3) +
+  labs(title = paste("Heatmap of Tax Category by Channel Type between", date_range_text), x = "Tax Category", y = "Channel Type", fill = "Total Net Collections") +
+  scale_fill_gradient(low = "lightgreen", high = "darkgreen", labels = dollar) +
   theme_minimal()
 
 ```
 
 
+```{r}
 
+```
 
