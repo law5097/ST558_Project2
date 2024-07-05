@@ -1,0 +1,96 @@
+---
+title: "ST 558 Project 2"
+subtitle: "Lee Worthington"
+format: 
+  html:
+    embed-resources: true
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+## Setup environment
+
+```{r}
+#| warning: FALSE
+#| message: FALSE
+
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tools)
+library(httr)
+library(jsonlite)
+library(magrittr)
+library(purrr)
+
+
+# API list
+  # https://github.com/public-apis/public-apis?tab=readme-ov-file#business
+# good ones?
+  # https://fiscaldata.treasury.gov/api-documentation/
+  # this is "fed treasury" in the api list
+
+
+```
+
+## API query function (see hw4 for example)
+
+```{r}
+#| warning: FALSE
+#| message: FALSE
+
+# define a function to query the API
+get_api_data <- function(endpoint, start_date, end_date = Sys.Date(), format = "json"){
+  base_url <- "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/"
+  
+  # construct the full URL
+  url <- paste0(base_url, endpoint)
+  
+  # pull data from api
+  url_data <- httr::GET(
+    url, 
+    query = list(
+      filter = paste0("record_date:gte:", start_date, ",record_date:lte:", end_date),
+      format = format
+      )
+    )
+  
+  # Parse the content
+  content <- url_data %>%
+    httr::content(as = "text") %>%
+    fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) %>%
+    pluck("data") %>%
+    as_tibble()
+  
+  # Return the results
+  return(content)
+}
+
+# set api options
+endpoint <- "v1/accounting/od/rates_of_exchange"
+start_date <- "2023-01-01"
+end_date <- "2023-12-31"
+
+# testing @@@@@@@@@@@@@@@@@@@@@
+fiscal_data <- get_api_data(endpoint, start_date, end_date)
+print(fiscal_data)
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
