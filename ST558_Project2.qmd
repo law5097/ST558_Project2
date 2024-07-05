@@ -41,46 +41,83 @@ library(purrr)
 #| warning: FALSE
 #| message: FALSE
 
-# define a function to query the API
-get_api_data <- function(endpoint, start_date, end_date = Sys.Date(), format = "json"){
-  base_url <- "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/"
+# define funciton with 6 filter options
+get_revenue_collections_data <- function(record_date = NULL, electronic_category_desc = NULL, channel_type_desc = NULL, tax_category_desc = NULL, 
+                                         record_fiscal_year = NULL, record_calendar_year = NULL, record_calendar_month = NULL, 
+                                         format = "json"){
   
-  # construct the full URL
-  url <- paste0(base_url, endpoint)
+  # set base url and endpoint
+  base_url <- 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/'
+  end_point <- 'v2/revenue/rcm'
+  full_url <- paste0(base_url, end_point)
   
-  # pull data from api
-  url_data <- httr::GET(
-    url, 
-    query = list(
-      filter = paste0("record_date:gte:", start_date, ",record_date:lte:", end_date),
-      format = format
-      )
-    )
+  # function to put the filters in a string format the api expects
+  build_filter <- function(field, value) {
+    if (!is.null(value)) {
+      return(paste0(field, ":eq:", value))
+    }
+    return(NULL)
+  }
   
-  # Parse the content
-  content <- url_data %>%
+  # create query parameters
+  query_params <- list(
+    build_filter("record_date", record_date),
+    build_filter("electronic_category_desc", electronic_category_desc),
+    build_filter("channel_type_desc", channel_type_desc),
+    build_filter("tax_category_desc", tax_category_desc),
+    build_filter("record_fiscal_year", record_fiscal_year),
+    build_filter("record_calendar_year", record_calendar_year),
+    build_filter("record_calendar_month", record_calendar_month),
+    format = format
+  )
+  
+  # remove NULL values from query
+  query_params <- compact(query_params)
+  
+  # Combine the filters into a single string if there are multiple filters
+  if (length(query_params) > 1) {
+    query_params$filter <- paste(query_params[-length(query_params)], collapse = ",")
+    query_params <- list(filter = query_params$filter, format = query_params$format)
+  }
+  
+  # get the data from the API
+  url_data <- httr::GET(full_url, query = query_params)
+  
+  #  response check
+  if (status_code(url_data) != 200) {
+    stop("Failed to retrieve data: ", status_code(url_data), " - ", content(url_data, "text"))
+  }
+  
+  # parse data s tibble
+  data <- url_data %>%
     httr::content(as = "text") %>%
     fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) %>%
     pluck("data") %>%
     as_tibble()
   
-  # Return the results
-  return(content)
+  # return the results
+  return(data)
 }
 
-# set api options
-endpoint <- "v1/accounting/od/rates_of_exchange"
-start_date <- "2023-01-01"
-end_date <- "2023-12-31"
-
-# testing @@@@@@@@@@@@@@@@@@@@@
-fiscal_data <- get_api_data(endpoint, start_date, end_date)
-print(fiscal_data)
-
-
-
+# testing @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+revenue_data <- get_revenue_collections_data(
+  record_date = NULL,
+  electronic_category_desc = "Fully Electronic - All",
+  channel_type_desc = NULL,
+  tax_category_desc = NULL,
+  record_fiscal_year = 2020,
+  record_calendar_year = NULL,
+  record_calendar_month = NULL
+)
+print(revenue_data)
 
 ```
+
+
+
+
+
+
 
 
 
