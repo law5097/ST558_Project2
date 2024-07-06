@@ -59,7 +59,7 @@ shinyUI(fluidPage(
                column(2,
                       
                       # Drop down options for electronic category description
-                      selectInput(
+                      checkboxGroupInput(
                         "electronic_category_desc", 
                         "Electronic Category Description",
                         choices = c("Electronic Settlement", "Fully Electronic - All", 
@@ -67,17 +67,17 @@ shinyUI(fluidPage(
                       ),
                       
                       # Drop down options for channel type description
-                      selectInput(
+                      checkboxGroupInput(
                         "channel_type_desc", 
                         "Channel Type Description",
                         choices = c("Mail", "Bank", "Internet", "Over-the-Counter (OTC)")
                       ),
                       
                       # Drop down options for tax category description
-                      selectInput(
+                      checkboxGroupInput(
                         "tax_category_desc", 
                         "Tax Category Description",
-                        choices = c("Non-Tax", "IRS Non-Tax", "IRS Tax")
+                        choices = c("IRS Non-Tax", "IRS Tax", "Non-Tax")
                       ),
                       
                       # Input for calendar year range
@@ -87,7 +87,7 @@ shinyUI(fluidPage(
                       sliderInput("record_calendar_month", "Calendar Month Range", min = 1, max = 12, value = c(1, 12), step = 1),
                       
                       # Input for number of rows
-                      numericInput("rows", "Number of Rows to Return (max 10000)", value = 10000, min = 1, max = 10000),
+                      numericInput("rows", "Number of Rows to Return (max 10000)", value = 1000, min = 1, max = 10000),
                       
                       # Column selection checkboxes
                       checkboxGroupInput("columns", "Select Columns to Display", 
@@ -106,7 +106,7 @@ shinyUI(fluidPage(
                ),
                column(10,
                       # Note about no data being displayed
-                      p("Note: If no data is displayed or an error is returned, it means no data meets the filter criteria."),
+                      p("Note: If no data is displayed or an error is returned, it means no data meets the filter criteria or there's a problem with the API host. Try changing your filters or reloading to fix this"),
                       
                       # Show data table
                       dataTableOutput("data_table")
@@ -117,15 +117,22 @@ shinyUI(fluidPage(
     # Create the data exploration tab
     tabPanel("Data Exploration",
              selectInput("summary_var", "Variable to Summarize", choices = c("Net Collections Amount" = "net_collections_amt", "Count of Records" = "count")),
-             selectInput("plot_type", "Plot Type", choices = c("Histogram", "Boxplot", "Line Plot", "Heatmap")),
+             uiOutput("plot_type_ui"),  # Dynamic UI for plot type
+             selectInput("contingency_var", "Variable to Partition by", 
+                         choices = c("Electronic Category Description" = "electronic_category_desc", 
+                                     "Channel Type Description" = "channel_type_desc", 
+                                     "Tax Category Description" = "tax_category_desc",
+                                     "Record Calendar Year" = "record_calendar_year")),
+             conditionalPanel(
+               condition = "input.plot_type == 'Heatmap' && input.contingency_var != 'record_calendar_year'",
+               selectInput("y_axis_var", "Y-axis Variable", choices = c("Year" = "record_calendar_year", "Month" = "record_calendar_month"))
+             ),
              plotOutput("plot"),
-             h4("Numeric Summaries"),
-             verbatimTextOutput("numeric_summary"),
-             h4("Contingency Tables"),
-             verbatimTextOutput("contingency_table")
+             h4("Summary Type"),
+             selectInput("summary_type", "Type of Summary", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table")),
+             verbatimTextOutput("summary_output")
     )
   )
 ))
-
 
 
