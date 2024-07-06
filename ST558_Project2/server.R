@@ -5,14 +5,16 @@ library(scales)
 library(httr)
 library(jsonlite)
 library(DT)
+library(purrr)
 
-# ==================================================================================
-# define api function
-# ==================================================================================
+# api notes
+  # api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
+  # no documentation on this order that i could find, had to infer from testing urls
 
-# ==================================================================================
-# define api function
-# ==================================================================================
+
+# ===================================================================
+# Define function with 6 filter options
+# ===================================================================
 
 # Define function with 6 filter options
 get_revenue_collections_data <- function(record_date = NULL, electronic_category_desc = NULL, channel_type_desc = NULL, tax_category_desc = NULL, 
@@ -32,19 +34,29 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
     return(NULL)
   }
   
-  # Create query parameters
+  build_range_filter <- function(field, values) {
+    if (!is.null(values) && length(values) == 2) {
+      return(c(
+        paste0(field, ":gte:", values[1]),
+        paste0(field, ":lte:", values[2])
+      ))
+    }
+    return(NULL)
+  }
+  
+  # Create query parameters in the inferred correct order
   filters <- c(
-    build_filter("record_date", record_date),
+    build_range_filter("record_calendar_year", record_calendar_year),
+    build_range_filter("record_calendar_month", record_calendar_month),
     build_filter("electronic_category_desc", electronic_category_desc),
-    build_filter("channel_type_desc", channel_type_desc),
     build_filter("tax_category_desc", tax_category_desc),
-    build_filter("record_fiscal_year", record_fiscal_year),
-    build_filter("record_calendar_year", record_calendar_year),
-    build_filter("record_calendar_month", record_calendar_month)
+    build_filter("channel_type_desc", channel_type_desc),
+    build_filter("record_date", record_date),
+    build_filter("record_fiscal_year", record_fiscal_year)
   )
   
-  # Print filters for debugging
-  print(filters)
+  # Flatten the list of filters
+  filters <- unlist(filters)
   
   # Remove NULL values from filters
   filters <- filters[!sapply(filters, is.null)]
@@ -59,13 +71,15 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   # Construct the full URL with query parameters
   query_string <- paste0("filter=", filter_string, "&format=", format, "&page[number]=", page_number, "&page[size]=", page_size)
   full_query_url <- paste0(full_url, "?", query_string)
-  print(full_query_url) # debugging @@@@@@@@@@@@@@@@@@@@@
   
-  # Print the full query URL for debugging
-  print(full_query_url)
+  # debugging @@@@@@@@@@@@@@@@@@@@@
+  print(full_query_url) 
+  
+  # Set user-agent header to mimic a web browser
+  headers <- add_headers(`User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
   
   # Get the data from the API
-  url_data <- httr::GET(full_query_url)
+  url_data <- httr::GET(full_query_url, headers)
   
   # Response check
   if (status_code(url_data) != 200) {
@@ -87,9 +101,9 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
 }
 
 
-# ==================================================================================
-# define server logic
-# ==================================================================================
+# ===================================================================
+# Define server logic
+# ===================================================================
 
 # Define server logic
 shinyServer(function(input, output, session) {
@@ -102,8 +116,8 @@ shinyServer(function(input, output, session) {
       channel_type_desc = input$channel_type_desc,
       tax_category_desc = input$tax_category_desc,
       record_fiscal_year = input$record_fiscal_year,
-      record_calendar_year = input$record_calendar_year,
-      record_calendar_month = input$record_calendar_month,
+      record_calendar_year = c(input$record_calendar_year[1], input$record_calendar_year[2]),
+      record_calendar_month = c(input$record_calendar_month[1], input$record_calendar_month[2]),
       page_number = 1, 
       page_size = input$rows
     )
@@ -152,4 +166,32 @@ shinyServer(function(input, output, session) {
     updateTabsetPanel(session, "main_tabs", selected = input$tabs)
   })
 })
+
+
+
+
+
+
+
+# working url filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
+
+# listed out
+# electronic_category_desc:eq:Fully Electronic - All
+# channel_type_desc:eq:Bank
+# tax_category_desc:eq:IRS Tax
+# record_calendar_year:eq:2004
+# record_calendar_month:eq:10
+
+
+
+
+
+
+
+
+
+
+
+
 

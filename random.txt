@@ -1,0 +1,9 @@
+# https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
+
+
+
+https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=channel_type_desc:eq:Over-the-Counter%20(OTC)
+https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Over-the-Counter%20%28OTC%29
+
+https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Over-the-Counter%20%28OTC%29,tax_category_desc:eq:IRS%20Tax
+https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Over-the-Counter%20%28OTC%29,record_date:gte:2004-10-03
