@@ -4,15 +4,15 @@
 # ==================================================================================
 
 # problems
-# 1 api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
-# no documentation on this order that i could find, had to infer from testing urls
-# also when passing amonth you need to pass 8 as 08, 1 as 01, etc
+  # 1 api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
+      # no documentation on this order that i could find, had to infer from testing urls
+  # also when passing amonth you need to pass 8 as 08, 1 as 01, etc
 
 # using this data
-# https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
+  # https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
 
 # working url filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
+  # https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
 
 # ==================================================================================
 # load libraries
@@ -151,7 +151,7 @@ shinyServer(function(input, output, session) {
     
     # Select only the columns chosen by the user
     selected_columns <- c("record_date", "net_collections_amt", input$columns)
-    data <- data |> select(all_of(selected_columns))
+    data <- data %>% select(all_of(selected_columns))
     
     return(data)
   })
@@ -167,7 +167,7 @@ shinyServer(function(input, output, session) {
   
   # Render data table without "Show # entries" and "Search" options
   output$data_table <- renderDataTable({
-    datatable(fetch_data(), options = list(dom = 't', pageLength = 20))  # 't' removes the table control elements
+    datatable(fetch_data(), options = list(dom = 't'))  # 't' removes the table control elements
   })
   
   # Download handler
@@ -192,7 +192,7 @@ shinyServer(function(input, output, session) {
     date_range_text <- paste(min_date, "to", max_date)
     
     if (input$summary_var == "count") {
-      data <- data |>
+      data <- data %>%
         mutate(count = 1)
     }
     
@@ -216,8 +216,8 @@ shinyServer(function(input, output, session) {
         scale_y_continuous(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         theme_minimal()
     } else if (input$plot_type == "Heatmap") {
-      heatmap_data <- data |>
-        group_by(record_calendar_year, record_calendar_month) |>
+      heatmap_data <- data %>%
+        group_by(record_calendar_year, record_calendar_month) %>%
         summarize(total_value = sum(!!sym(input$summary_var), na.rm = TRUE), .groups = "drop")
       
       ggplot(heatmap_data, aes(x = as.factor(record_calendar_year), y = as.factor(record_calendar_month), fill = total_value)) +
@@ -227,30 +227,6 @@ shinyServer(function(input, output, session) {
         scale_fill_gradient(low = "lightgreen", high = "darkgreen", labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         theme_minimal()
     }
-  })
-  
-  # Generate numeric summaries
-  output$numeric_summary <- renderPrint({
-    data <- fetch_data()
-    
-    summary_data <- data |>
-      summarise(
-        mean_amt = mean(net_collections_amt, na.rm = TRUE),
-        median_amt = median(net_collections_amt, na.rm = TRUE),
-        sd_amt = sd(net_collections_amt, na.rm = TRUE)
-      )
-    
-    print(summary_data)
-  })
-  
-  # Generate contingency tables
-  output$contingency_table <- renderPrint({
-    data <- fetch_data()
-    
-    contingency_data <- data |>
-      count(electronic_category_desc, channel_type_desc)
-    
-    print(contingency_data)
   })
   
   # Sync the main panel tabs with the sidebar tabs
