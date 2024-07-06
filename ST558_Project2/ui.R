@@ -27,15 +27,22 @@ shinyUI(fluidPage(
                         "electronic_category_desc", 
                         "Electronic Category Description",
                         choices = c("Electronic Settlement", "Fully Electronic - All", 
-                                    "Fully Electronic - FS", "Non-Electronic"),
-                        selected = "Fully Electronic - All"  # Specify the default value
+                                    "Fully Electronic - FS", "Non-Electronic")
                       ),
                       
                       # Drop down options for channel type description
-                      uiOutput("channel_type_ui"),
+                      selectInput(
+                        "channel_type_desc", 
+                        "Channel Type Description",
+                        choices = c("Bank", "Internet", "Mail", "Over-the-Counter (OTC)")
+                      ),
                       
                       # Drop down options for tax category description
-                      uiOutput("tax_category_ui"),
+                      selectInput(
+                        "tax_category_desc", 
+                        "Tax Category Description",
+                        choices = c("IRS Non-Tax", "IRS Tax", "Non-Tax")
+                      ),
                       
                       # Input for calendar year range
                       sliderInput("record_calendar_year", "Calendar Year Range", min = 2000, max = 2024, value = c(2000, 2024), step = 1),

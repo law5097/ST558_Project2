@@ -1,3 +1,7 @@
+# api notes
+  # api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
+  # no documentation on this order that i could find, had to infer from testing urls
+
 library(shiny)
 library(dplyr)
 library(ggplot2)
@@ -7,16 +11,10 @@ library(jsonlite)
 library(DT)
 library(purrr)
 
-# api notes
-  # api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
-  # no documentation on this order that i could find, had to infer from testing urls
+# ==================================================================================
+# define api function
+# ==================================================================================
 
-
-# ===================================================================
-# Define function with 6 filter options
-# ===================================================================
-
-# Define function with 6 filter options
 get_revenue_collections_data <- function(record_date = NULL, electronic_category_desc = NULL, channel_type_desc = NULL, tax_category_desc = NULL, 
                                          record_fiscal_year = NULL, record_calendar_year = NULL, record_calendar_month = NULL, 
                                          format = "json", page_number = 1, page_size = 1000) {
@@ -44,15 +42,15 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
     return(NULL)
   }
   
-  # Create query parameters in the inferred correct order
+  # Create query parameters without any specific order
   filters <- c(
-    build_range_filter("record_calendar_year", record_calendar_year),
-    build_range_filter("record_calendar_month", record_calendar_month),
-    build_filter("electronic_category_desc", electronic_category_desc),
-    build_filter("tax_category_desc", tax_category_desc),
-    build_filter("channel_type_desc", channel_type_desc),
     build_filter("record_date", record_date),
-    build_filter("record_fiscal_year", record_fiscal_year)
+    build_filter("electronic_category_desc", electronic_category_desc),
+    build_filter("channel_type_desc", channel_type_desc),
+    build_filter("tax_category_desc", tax_category_desc),
+    build_filter("record_fiscal_year", record_fiscal_year),
+    build_range_filter("record_calendar_year", record_calendar_year),
+    build_range_filter("record_calendar_month", record_calendar_month)
   )
   
   # Flatten the list of filters
@@ -87,10 +85,10 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   }
   
   # Parse data as tibble
-  data <- url_data %>%
-    httr::content(as = "text") %>%
-    fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) %>%
-    pluck("data") %>%
+  data <- url_data |>
+    httr::content(as = "text") |>
+    fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) |>
+    pluck("data") |>
     as_tibble()
   
   # Print a glimpse of the data for debugging
@@ -100,11 +98,9 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   return(data)
 }
 
-
-# ===================================================================
-# Define server logic
-# ===================================================================
-
+# ==================================================================================
+# define api function
+# ==================================================================================
 # Define server logic
 shinyServer(function(input, output, session) {
   
@@ -166,6 +162,7 @@ shinyServer(function(input, output, session) {
     updateTabsetPanel(session, "main_tabs", selected = input$tabs)
   })
 })
+
 
 
 
