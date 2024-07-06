@@ -1,6 +1,22 @@
+
+# ==================================================================================
 # api notes
-  # api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
-  # no documentation on this order that i could find, had to infer from testing urls
+# ==================================================================================
+
+# problems
+  # 1 api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
+      # no documentation on this order that i could find, had to infer from testing urls
+  # also when passing amonth you need to pass 8 as 08, 1 as 01, etc
+
+# using this data
+  # https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
+
+# working url filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  # https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
+
+# ==================================================================================
+# load libraries
+# ==================================================================================
 
 library(shiny)
 library(dplyr)
@@ -15,6 +31,7 @@ library(purrr)
 # define api function
 # ==================================================================================
 
+# define api function
 get_revenue_collections_data <- function(record_date = NULL, electronic_category_desc = NULL, channel_type_desc = NULL, tax_category_desc = NULL, 
                                          record_fiscal_year = NULL, record_calendar_year = NULL, record_calendar_month = NULL, 
                                          format = "json", page_number = 1, page_size = 1000) {
@@ -24,33 +41,42 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   end_point <- 'v2/revenue/rcm'
   full_url <- paste0(base_url, end_point)
   
+  # URL Encoding Function
+  url_encode <- function(value) {
+    return(URLencode(as.character(value), reserved = TRUE))
+  }
+  
   # Function to put the filters in a string format the API expects
   build_filter <- function(field, value) {
     if (!is.null(value) && value != "") {
-      return(paste0(field, ":eq:", URLencode(as.character(value))))
+      return(paste0(field, ":eq:", url_encode(value)))
     }
     return(NULL)
   }
   
   build_range_filter <- function(field, values) {
     if (!is.null(values) && length(values) == 2) {
+      gte_value <- values[1]
+      lte_value <- values[2]
+      if (field == "record_calendar_month") {
+        gte_value <- sprintf("%02d", as.numeric(gte_value))
+        lte_value <- sprintf("%02d", as.numeric(lte_value))
+      }
       return(c(
-        paste0(field, ":gte:", values[1]),
-        paste0(field, ":lte:", values[2])
+        paste0(field, ":gte:", url_encode(gte_value)),
+        paste0(field, ":lte:", url_encode(lte_value))
       ))
     }
     return(NULL)
   }
   
-  # Create query parameters without any specific order
+  # Create filters in the specified order
   filters <- c(
-    build_filter("record_date", record_date),
-    build_filter("electronic_category_desc", electronic_category_desc),
-    build_filter("channel_type_desc", channel_type_desc),
-    build_filter("tax_category_desc", tax_category_desc),
-    build_filter("record_fiscal_year", record_fiscal_year),
     build_range_filter("record_calendar_year", record_calendar_year),
-    build_range_filter("record_calendar_month", record_calendar_month)
+    build_range_filter("record_calendar_month", record_calendar_month),
+    build_filter("electronic_category_desc", electronic_category_desc),
+    build_filter("tax_category_desc", tax_category_desc),
+    build_filter("channel_type_desc", channel_type_desc)
   )
   
   # Flatten the list of filters
@@ -71,13 +97,10 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   full_query_url <- paste0(full_url, "?", query_string)
   
   # debugging @@@@@@@@@@@@@@@@@@@@@
-  print(full_query_url) 
-  
-  # Set user-agent header to mimic a web browser
-  headers <- add_headers(`User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+  print(full_query_url)
   
   # Get the data from the API
-  url_data <- httr::GET(full_query_url, headers)
+  url_data <- httr::GET(full_query_url)
   
   # Response check
   if (status_code(url_data) != 200) {
@@ -99,14 +122,14 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
 }
 
 # ==================================================================================
-# define api function
+# define server logic
 # ==================================================================================
-# Define server logic
+
 shinyServer(function(input, output, session) {
   
   # Reactive expression to fetch data based on user inputs
   fetch_data <- reactive({
-    get_revenue_collections_data(
+    data <- get_revenue_collections_data(
       record_date = input$record_date,
       electronic_category_desc = input$electronic_category_desc,
       channel_type_desc = input$channel_type_desc,
@@ -117,6 +140,29 @@ shinyServer(function(input, output, session) {
       page_number = 1, 
       page_size = input$rows
     )
+    
+    # Convert to numeric for plots
+    data <- data |>
+      mutate(
+        net_collections_amt = as.numeric(net_collections_amt),
+        record_calendar_year = as.integer(record_calendar_year),
+        record_calendar_month = as.integer(record_calendar_month)
+      )
+    
+    # Select only the columns chosen by the user
+    selected_columns <- c("record_date", "net_collections_amt", input$columns)
+    data <- data %>% select(all_of(selected_columns))
+    
+    return(data)
+  })
+  
+  # Update plot types based on summary variable
+  observeEvent(input$summary_var, {
+    if (input$summary_var == "net_collections_amt") {
+      updateSelectInput(session, "plot_type", choices = c("Histogram", "Boxplot", "Line Plot", "Heatmap"))
+    } else if (input$summary_var == "count") {
+      updateSelectInput(session, "plot_type", choices = c("Line Plot", "Heatmap"))
+    }
   })
   
   # Render data table without "Show # entries" and "Search" options
@@ -138,21 +184,47 @@ shinyServer(function(input, output, session) {
   output$plot <- renderPlot({
     data <- fetch_data()
     
+    # Extract date range and format as "Month YYYY"
+    date_range_year <- range(data$record_calendar_year, na.rm = TRUE)
+    date_range_month <- range(data$record_calendar_month, na.rm = TRUE)
+    min_date <- paste(month.name[date_range_month[1]], date_range_year[1])
+    max_date <- paste(month.name[date_range_month[2]], date_range_year[2])
+    date_range_text <- paste(min_date, "to", max_date)
+    
+    if (input$summary_var == "count") {
+      data <- data %>%
+        mutate(count = 1)
+    }
+    
     if (input$plot_type == "Histogram") {
-      ggplot(data, aes_string(x = input$summary_var)) + 
-        geom_histogram(fill = "blue", bins = 30) + 
+      ggplot(data, aes_string(x = input$summary_var)) +
+        geom_histogram(bins = 25, fill = "lightgreen", color = "black", alpha = 0.5) +
+        labs(title = paste("Histogram of", input$summary_var, "between", date_range_text), x = input$summary_var, y = "Count") +
+        scale_x_log10(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         theme_minimal()
     } else if (input$plot_type == "Boxplot") {
-      ggplot(data, aes_string(x = input$summary_var, y = "some_numeric_column")) + 
-        geom_boxplot(fill = "blue") + 
-        theme_minimal()
+      ggplot(data, aes_string(x = "as.factor(record_calendar_year)", y = input$summary_var, fill = "as.factor(record_calendar_year)")) +
+        geom_boxplot(alpha = 0.5) +
+        labs(title = paste("Distribution of", input$summary_var, "by Year between", date_range_text), x = "Year", y = input$summary_var) +
+        scale_y_log10(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
+        theme_minimal() +
+        theme(legend.position = "none")
     } else if (input$plot_type == "Line Plot") {
-      ggplot(data, aes_string(x = "some_time_column", y = input$summary_var, group = 1)) + 
-        geom_line() + 
+      ggplot(data, aes_string(x = "as.factor(record_calendar_year)", y = input$summary_var, color = "tax_category_desc", group = "tax_category_desc")) +
+        stat_summary(fun = sum, geom = "line") +
+        labs(title = paste(input$summary_var, "by Year and Tax Category between", date_range_text), x = "Year", y = input$summary_var) +
+        scale_y_continuous(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         theme_minimal()
     } else if (input$plot_type == "Heatmap") {
-      ggplot(data, aes_string(x = "some_category", y = input$summary_var, fill = "some_value")) + 
-        geom_tile() + 
+      heatmap_data <- data %>%
+        group_by(record_calendar_year, record_calendar_month) %>%
+        summarize(total_value = sum(!!sym(input$summary_var), na.rm = TRUE), .groups = "drop")
+      
+      ggplot(heatmap_data, aes(x = as.factor(record_calendar_year), y = as.factor(record_calendar_month), fill = total_value)) +
+        geom_tile(alpha = 0.5) +
+        geom_text(aes(label = if (input$summary_var == "net_collections_amt") scales::dollar(total_value) else total_value), color = "black", size = 3) +
+        labs(title = paste("Heatmap of", input$summary_var, "by Year and Month between", date_range_text), x = "Year", y = "Month", fill = input$summary_var) +
+        scale_fill_gradient(low = "lightgreen", high = "darkgreen", labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         theme_minimal()
     }
   })
@@ -162,33 +234,3 @@ shinyServer(function(input, output, session) {
     updateTabsetPanel(session, "main_tabs", selected = input$tabs)
   })
 })
-
-
-
-
-
-
-
-
-# working url filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
-
-# listed out
-# electronic_category_desc:eq:Fully Electronic - All
-# channel_type_desc:eq:Bank
-# tax_category_desc:eq:IRS Tax
-# record_calendar_year:eq:2004
-# record_calendar_month:eq:10
-
-
-
-
-
-
-
-
-
-
-
-
-

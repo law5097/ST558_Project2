@@ -34,10 +34,6 @@ library(purrr)
 # using this data @@@@@@@@@
   # https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
 
-# working api with multiple filters
-https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank
-
-
 ```
 
 ## 1 API query function (see hw4 for example)
@@ -46,7 +42,7 @@ https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?f
 #| warning: FALSE
 #| message: FALSE
 
-# Define function with 6 filter options
+# define api function
 get_revenue_collections_data <- function(record_date = NULL, electronic_category_desc = NULL, channel_type_desc = NULL, tax_category_desc = NULL, 
                                          record_fiscal_year = NULL, record_calendar_year = NULL, record_calendar_month = NULL, 
                                          format = "json", page_number = 1, page_size = 1000) {
@@ -56,29 +52,51 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   end_point <- 'v2/revenue/rcm'
   full_url <- paste0(base_url, end_point)
   
+  # URL Encoding Function
+  url_encode <- function(value) {
+    return(URLencode(as.character(value), reserved = TRUE))
+  }
+  
   # Function to put the filters in a string format the API expects
   build_filter <- function(field, value) {
-    if (!is.null(value)) {
-      return(paste0(field, ":eq:", URLencode(value)))
+    if (!is.null(value) && value != "") {
+      return(paste0(field, ":eq:", url_encode(value)))
     }
     return(NULL)
   }
   
-  # Create query parameters
+  build_range_filter <- function(field, values) {
+    if (!is.null(values) && length(values) == 2) {
+      gte_value <- values[1]
+      lte_value <- values[2]
+      if (field == "record_calendar_month") {
+        gte_value <- sprintf("%02d", as.numeric(gte_value))
+        lte_value <- sprintf("%02d", as.numeric(lte_value))
+      }
+      return(c(
+        paste0(field, ":gte:", url_encode(gte_value)),
+        paste0(field, ":lte:", url_encode(lte_value))
+      ))
+    }
+    return(NULL)
+  }
+  
+  # Create filters in the specified order
   filters <- c(
-    build_filter("record_date", record_date),
+    build_range_filter("record_calendar_year", record_calendar_year),
+    build_range_filter("record_calendar_month", record_calendar_month),
     build_filter("electronic_category_desc", electronic_category_desc),
-    build_filter("channel_type_desc", channel_type_desc),
     build_filter("tax_category_desc", tax_category_desc),
-    build_filter("record_fiscal_year", record_fiscal_year),
-    build_filter("record_calendar_year", record_calendar_year),
-    build_filter("record_calendar_month", record_calendar_month)
+    build_filter("channel_type_desc", channel_type_desc)
   )
+  
+  # Flatten the list of filters
+  filters <- unlist(filters)
   
   # Remove NULL values from filters
   filters <- filters[!sapply(filters, is.null)]
   
-  # Combine the filters into a single string
+  # Combine the filters into a single string separated by commas
   filter_string <- if (length(filters) > 0) {
     paste(filters, collapse = ",")
   } else {
@@ -88,6 +106,8 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   # Construct the full URL with query parameters
   query_string <- paste0("filter=", filter_string, "&format=", format, "&page[number]=", page_number, "&page[size]=", page_size)
   full_query_url <- paste0(full_url, "?", query_string)
+  
+  # debugging @@@@@@@@@@@@@@@@@@@@@
   print(full_query_url)
   
   # Get the data from the API
@@ -99,11 +119,14 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   }
   
   # Parse data as tibble
-  data <- url_data %>%
-    httr::content(as = "text") %>%
-    fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) %>%
-    pluck("data") %>%
+  data <- url_data |>
+    httr::content(as = "text") |>
+    fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) |>
+    pluck("data") |>
     as_tibble()
+  
+  # Print a glimpse of the data for debugging
+  print(head(data))
   
   # Return the results
   return(data)
@@ -113,7 +136,7 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
 revenue_data <- get_revenue_collections_data(
   record_date = NULL,
   electronic_category_desc = 'Electronic Settlement',
-  channel_type_desc = 'Internet',
+  channel_type_desc = 'Mail',
   tax_category_desc = NULL,
   record_fiscal_year = NULL,
   record_calendar_year = NULL,
@@ -125,6 +148,10 @@ dim(revenue_data)
 min(revenue_data$record_date)
 max(revenue_data$record_date)
 
+```
+
+```{r}
+ httr::GET("https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm")
 ```
 
 ## 2 Data summary functions

@@ -34,7 +34,7 @@ shinyUI(fluidPage(
                       selectInput(
                         "channel_type_desc", 
                         "Channel Type Description",
-                        choices = c("Bank", "Internet", "Mail", "Over-the-Counter (OTC)")
+                        choices = c("Mail", "Bank", "Internet", "Over-the-Counter (OTC)")
                       ),
                       
                       # Drop down options for tax category description
@@ -53,6 +53,18 @@ shinyUI(fluidPage(
                       # Input for number of rows
                       numericInput("rows", "Number of Rows to Return", value = 1000, min = 1),
                       
+                      # Column selection checkboxes
+                      checkboxGroupInput("columns", "Select Columns to Display", 
+                                         choices = c("Electronic Category Description" = "electronic_category_desc", 
+                                                     "Channel Type Description" = "channel_type_desc", 
+                                                     "Tax Category Description" = "tax_category_desc", 
+                                                     "Record Fiscal Year" = "record_fiscal_year", 
+                                                     "Record Calendar Year" = "record_calendar_year", 
+                                                     "Record Calendar Month" = "record_calendar_month"),
+                                         selected = c("electronic_category_desc", "channel_type_desc", "tax_category_desc", "record_fiscal_year", "record_calendar_year", "record_calendar_month")),
+                      # Message about mandatory columns
+                      p("Note: 'record_date' and 'net_collections_amt' are always selected.")
+                      ,
                       # Button to query the data
                       actionButton("query_data", "Query Data"),
                       
@@ -68,12 +80,13 @@ shinyUI(fluidPage(
     
     # Create the data exploration tab
     tabPanel("Data Exploration",
-             selectInput("summary_var", "Variable to Summarize", choices = c("tax_category_desc", "channel_type_desc")),
+             selectInput("summary_var", "Variable to Summarize", choices = c("Net Collections Amount" = "net_collections_amt", "Count of Records" = "count")),
              selectInput("plot_type", "Plot Type", choices = c("Histogram", "Boxplot", "Line Plot", "Heatmap")),
              plotOutput("plot")
     )
   )
 ))
+
 
 
 
