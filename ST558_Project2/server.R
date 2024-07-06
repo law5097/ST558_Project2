@@ -147,6 +147,13 @@ shinyServer(function(input, output, session) {
         record_calendar_month = as.integer(record_calendar_month)
       )
     
+    return(data)
+  })
+  
+  # Reactive expression to fetch data for the table based on user-selected columns
+  fetch_table_data <- reactive({
+    data <- fetch_data()
+    
     # Select only the columns chosen by the user
     selected_columns <- c("record_date", "net_collections_amt", input$columns)
     data <- data |> select(all_of(selected_columns))
@@ -167,7 +174,7 @@ shinyServer(function(input, output, session) {
   
   # Render data table without "Show # entries" and "Search" options
   output$data_table <- renderDataTable({
-    datatable(fetch_data(), options = list(dom = 't', pageLength = 20))  # 't' removes the table control elements
+    datatable(fetch_table_data(), options = list(dom = 't', pageLength = 20))  # 't' removes the table control elements
   })
   
   # Download handler
@@ -176,7 +183,7 @@ shinyServer(function(input, output, session) {
       paste("revenue_data_", Sys.Date(), ".csv", sep = "")
     },
     content = function(file) {
-      write.csv(fetch_data(), file, row.names = FALSE)
+      write.csv(fetch_table_data(), file, row.names = FALSE)
     }
   )
   
