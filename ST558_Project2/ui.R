@@ -1,7 +1,6 @@
 # ==================================================================================
 # ui.R code
 # ==================================================================================
-
 # Define UI for the application
 shinyUI(fluidPage(
   
@@ -127,6 +126,10 @@ shinyUI(fluidPage(
                condition = "input.plot_type == 'Heatmap' && input.contingency_var != 'record_calendar_year'",
                selectInput("y_axis_var", "Y-axis Variable", choices = c("Year" = "record_calendar_year", "Month" = "record_calendar_month"))
              ),
+             conditionalPanel(
+               condition = "input.plot_type == 'Histogram'",
+               checkboxInput("facet_histogram", "Facet by selected variable", value = FALSE)
+             ),
              plotOutput("plot"),
              h4("Summary Type"),
              selectInput("summary_type", "Type of Summary", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table")),
@@ -134,5 +137,6 @@ shinyUI(fluidPage(
     )
   )
 ))
+
 
 

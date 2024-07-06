@@ -197,11 +197,17 @@ shinyServer(function(input, output, session) {
     }
     
     if (input$plot_type == "Histogram") {
-      ggplot(data, aes_string(x = input$summary_var, fill = input$contingency_var)) +
+      p <- ggplot(data, aes_string(x = input$summary_var, fill = input$contingency_var)) +
         geom_histogram(bins = 25, alpha = 0.5, position = "stack") +
         labs(title = paste("Histogram of", input$summary_var, "between", date_range_text), x = input$summary_var, y = "Count") +
         scale_x_log10(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         theme_minimal()
+      
+      if (input$facet_histogram) {
+        p <- p + facet_wrap(as.formula(paste("~", input$contingency_var)))
+      }
+      
+      print(p)
     } else if (input$plot_type == "Boxplot") {
       ggplot(data, aes_string(x = input$contingency_var, y = input$summary_var, fill = input$contingency_var)) +
         geom_boxplot(alpha = 0.5) +
