@@ -5,14 +5,15 @@
 
 # problems
 # 1 api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
-# no documentation on this order that i could find, had to infer from testing urls
-# also when passing amonth you need to pass 8 as 08, 1 as 01, etc
-
-# using this data
-# https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
+  # no documentation on this order that i could find, had to infer from testing urls
+# 2 also when passing a month you need to pass 8 as 08, 1 as 01, etc
 
 # working url filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
+  # https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
+
+# using this data
+  # https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
+
 
 # ==================================================================================
 # server.R code
@@ -55,6 +56,7 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
     return(NULL)
   }
   
+  # Function to put the RANGE filters in a string format the API expects
   build_range_filter <- function(field, values) {
     if (!is.null(values) && length(values) == 2) {
       gte_value <- values[1]
@@ -71,7 +73,7 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
     return(NULL)
   }
   
-  # Create filters in the specified order
+  # Create filters in the order the api needs
   filters <- c(
     build_range_filter("record_calendar_year", record_calendar_year),
     build_range_filter("record_calendar_month", record_calendar_month),
@@ -97,7 +99,7 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   query_string <- paste0("filter=", filter_string, "&format=", format, "&page[number]=", page_number, "&page[size]=", page_size)
   full_query_url <- paste0(full_url, "?", query_string)
   
-  # debugging @@@@@@@@@@@@@@@@@@@@@
+  # Debugging @@@@@@@@@@@@@@@@@@@@@
   print(full_query_url)
   
   # Get the data from the API
@@ -115,7 +117,7 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
     pluck("data") |>
     as_tibble()
   
-  # Print a glimpse of the data for debugging
+  # Print for debugging @@@@@@@@@@@@@@@@@@@@@
   print(head(data))
   
   # Return the results
@@ -123,9 +125,9 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
 }
 
 # Define server logic
-shinyServer(function(input, output, session) {
+shinyServer(function(input, output, session){
   
-  # Reactive expression to fetch data based on user inputs
+  # Reactive expression to fetch data based on user inputs in the UI
   fetch_data <- reactive({
     data <- get_revenue_collections_data(
       record_date = input$record_date,
@@ -147,6 +149,7 @@ shinyServer(function(input, output, session) {
         record_calendar_month = as.integer(record_calendar_month)
       )
     
+    # return results
     return(data)
   })
   
@@ -154,30 +157,40 @@ shinyServer(function(input, output, session) {
   fetch_table_data <- reactive({
     data <- fetch_data()
     
-    # Select only the columns chosen by the user
+    # Select only the columns chosen by the user + mandatory defaults
     selected_columns <- c("record_date", "net_collections_amt", input$columns)
     data <- data |> select(all_of(selected_columns))
     
+    # return selection
     return(data)
   })
   
-  # Update plot types based on summary variable
+  # Update plot types based on summary variable while preserving current selection if possible
   observeEvent(input$summary_var, {
+    
+    # Get initial plot type
+    current_plot_type <- input$plot_type
+    
+    # Define plots and summaries for net_collections_amt
     if (input$summary_var == "net_collections_amt") {
-      updateSelectInput(session, "plot_type", choices = c("Histogram", "Boxplot", "Line Plot", "Heatmap"))
+      plot_types <- c("Histogram", "Boxplot", "Line Plot", "Heatmap")
+      updateSelectInput(session, "plot_type", choices = plot_types, selected = if (!is.null(current_plot_type) && current_plot_type %in% plot_types) current_plot_type else plot_types[1])
       updateSelectInput(session, "summary_type", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table"))
-    } else if (input$summary_var == "count") {
-      updateSelectInput(session, "plot_type", choices = c("Line Plot", "Heatmap"))
+    } 
+    # Define plots and summaries for count
+    else if (input$summary_var == "count") {
+      plot_types <- c("Line Plot", "Heatmap")
+      updateSelectInput(session, "plot_type", choices = plot_types, selected = if (!is.null(current_plot_type) && current_plot_type %in% plot_types) current_plot_type else plot_types[1])
       updateSelectInput(session, "summary_type", choices = c("Contingency Table" = "contingency_table"))
     }
   })
   
-  # Render data table without "Show # entries" and "Search" options
+  # Render data table without
   output$data_table <- renderDataTable({
     datatable(fetch_table_data(), options = list(dom = 't', pageLength = 20))  # 't' removes the table control elements
   })
   
-  # Download handler
+  # Download handler is a shiny function to enable file downloads, here im outputing as csv
   output$download_data <- downloadHandler(
     filename = function() {
       paste("revenue_data_", Sys.Date(), ".csv", sep = "")
@@ -198,6 +211,7 @@ shinyServer(function(input, output, session) {
     max_date <- paste(month.name[date_range_month[2]], date_range_year[2])
     date_range_text <- paste(min_date, "to", max_date)
     
+    # Define all the different plots a user can see based on the selected variables
     if (input$summary_var == "count") {
       data <- data |>
         mutate(count = 1)
@@ -251,7 +265,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  # Generate summaries based on user input
+  # Create contingency and summary tables based on user selection
   output$summary_output <- renderPrint({
     data <- fetch_data()
     
@@ -266,16 +280,17 @@ shinyServer(function(input, output, session) {
       summary_data <- data |>
         group_by(!!sym(input$contingency_var)) |>
         summarise(
-          p25 = quantile(net_collections_amt, 0.25, na.rm = TRUE),
-          median_amt = median(net_collections_amt, na.rm = TRUE),
-          p75 = quantile(net_collections_amt, 0.75, na.rm = TRUE),
-          p100 = quantile(net_collections_amt, 1, na.rm = TRUE)
+          percentile_25 = quantile(net_collections_amt, 0.25, na.rm = TRUE),
+          percentile_50 = median(net_collections_amt, na.rm = TRUE),
+          percentile_75 = quantile(net_collections_amt, 0.75, na.rm = TRUE),
+          percentile_100 = quantile(net_collections_amt, 1, na.rm = TRUE)
         )
     } else if (input$summary_type == "contingency_table") {
       summary_data <- data |>
         count(!!sym(input$contingency_var))
     }
     
+    # Print sumnmaries
     print(summary_data)
   })
   
