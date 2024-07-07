@@ -118,7 +118,7 @@ shinyUI(fluidPage(
           p("Note: It may take a second for the data to load. If no data is displayed or an error is returned, it means no data meets the filter criteria or there's a problem with the API host. Try changing your filters or reloading to fix this"),
           
           # Show data table
-          dataTableOutput("data_table")
+          tableOutput("data_table")
         )
       )
     ),

@@ -190,10 +190,10 @@ shinyServer(function(input, output, session){
     }
   })
   
-  # Render data table without
-  output$data_table <- renderDataTable({
+  # Render table
+  output$data_table <- renderTable({
     req(fetch_table_data())  # Ensure data is available
-    datatable(fetch_table_data(), options = list(dom = 't', pageLength = 20))  # 't' removes the table control elements
+    fetch_table_data()  # Simply return the data frame
   })
   
   # Download handler is a shiny function to enable file downloads, here im outputing as csv
