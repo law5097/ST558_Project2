@@ -37,7 +37,8 @@ shinyUI(fluidPage(
       tags$ul(
         tags$li("Because this app allows the user to query the API freely, certain combinations of filters may return an error as there is no data that meet the given criteria"),
         tags$li("Similarly, some combinations of filters may only have data in certain years"),
-        tags$li("There is a 10000 record limit on the api, so if you try to return everything you'll only get the first 10000 records")
+        tags$li("There is a 10000 record limit on the api, so if you try to return everything you'll only get the first 10000 records"),
+        tags$li("There are some additional variables available in the source data that I did not include in this app, such as the IDs")
       ),
       
       h3("Data source"),
@@ -186,3 +187,4 @@ shinyUI(fluidPage(
     )
   )
 ))
+

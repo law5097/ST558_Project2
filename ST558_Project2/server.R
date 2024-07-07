@@ -1,4 +1,3 @@
-
 # ==================================================================================
 # api notes
 # ==================================================================================
@@ -166,16 +165,17 @@ shinyServer(function(input, output, session){
       page_size = input$rows
     )
     
-    # Convert data to numeric for plots
+    # Convert data to numeric for plots and handle non-finite values
     data <- data |>
       mutate(
         net_collections_amt = as.numeric(net_collections_amt),
         record_calendar_year = as.factor(record_calendar_year),
         record_calendar_month = as.factor(record_calendar_month)
-      )
+      ) |>
+      filter(!is.na(net_collections_amt) & net_collections_amt > 0)
     
     # Print for debugging @@@@@@@@@@@@@@@@@@@@@
-    #print(head(data))
+    # print(head(data))
     
     # return results
     return(data)
@@ -189,8 +189,8 @@ shinyServer(function(input, output, session){
     selected_columns <- c("record_date", "net_collections_amt", input$columns)
     data <- data |> select(all_of(selected_columns))
     
-    # Print for debugging
-    print(head(data))
+    # Print for debugging @@@@@@@@@@@@@@@@@@@@@
+    # print(head(data))
     
     # return selection
     return(data)
@@ -219,6 +219,7 @@ shinyServer(function(input, output, session){
   
   # Render table
   output$data_table <- renderTable({
+    
     # Check data is available
     req(fetch_table_data())  
     
@@ -259,6 +260,8 @@ shinyServer(function(input, output, session){
   
   # Generate dynamic UI for second variable in contingency table
   output$second_var_ui <- renderUI({
+    
+    # If the user selects contigency table option show the options below
     req(input$summary_type == "contingency_table")
     
     # List of all potential second variables with clean names
@@ -273,6 +276,10 @@ shinyServer(function(input, output, session){
     
     # Get data
     data <- fetch_data()
+    
+    # Ensure plot type is selected
+    req(input$plot_type)
+    req(input$summary_var)
     
     # Extract date range and format as "Month YYYY"
     date_range_year <- range(as.numeric(as.character(data$record_calendar_year)), na.rm = TRUE)
@@ -349,6 +356,9 @@ shinyServer(function(input, output, session){
   output$summary_output <- renderPrint({
     data <- fetch_data()
     
+    req(input$summary_type)
+    req(input$contingency_var)
+    
     if (input$summary_type == "mean_sd") {
       summary_data <- data |>
         group_by(!!sym(input$contingency_var)) |>
@@ -385,3 +395,4 @@ shinyServer(function(input, output, session){
     updateTabsetPanel(session, "main_tabs", selected = input$tabs)
   })
 })
+
