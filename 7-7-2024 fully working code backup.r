@@ -1,19 +1,187 @@
+# ==================================================================================
+# ui.R code
+# ==================================================================================
+
+# Define UI for the application
+shinyUI(fluidPage(
+  tags$style(HTML("
+    body {
+      background-color: #fcfcfc;
+    }
+  ")),
+  
+  # App title
+  titlePanel("ST 558 Project 2 - Lee Worthington"),
+  
+  # Create tabs
+  tabsetPanel(
+    id = "tabs",
+    
+    # Create the about tab
+    tabPanel(
+      "About",
+      img(src = "logo.png", height = "100px"),  # Correct path
+      
+      h3("About the App"),
+      p("This app allows users to:"),
+      tags$ul(
+        tags$li("Query U.S. Government Revenue Collections API"),
+        tags$li("Define the filters sent to the API"),
+        tags$li("Define the columns returned by the API"),
+        tags$li("Download the data as a csv"),
+        tags$li("Generate summary plots/statistics based on user selections")
+      ),
+      p("Please note the following:"),
+      tags$ul(
+        tags$li("Because this app allows the user to query the API freely, certain combinations of filters may return an error as there is no data that meet the given criteria"),
+        tags$li("Similarly, some combinations of filters may only have data in certain years"),
+        tags$li("There is a 10000 record limit on the api, so if you try to return everything you'll only get the first 10000 records")
+      ),
+      
+      h3("Data source"),
+      p("Here's a brief description of the data from the treasury department:"),
+      tags$ul(
+        tags$li("The U.S. Government Revenue Collections dataset provides a daily overview of federal revenue collections such as individual and corporate income tax deposits, customs duties, fees for government service, fines, and loan repayments. These collections can be made through either electronic or non-electronic transactions by mail, internet, bank, or over-the-counter channels."),
+        tags$li("More information about this data can be found in this link: https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections")
+      ),
+      
+      h3("About the tabs"),
+      p("There are 3 different tabs in this app, with the following purposes:"),
+      tags$ul(
+        tags$li("The about tab is here to give some introductionary info about the app, as well as links to resources to learn more about the data"),
+        tags$li("The data selection tab allows you to query the API live with filters you specify, as well as download the data as a csv file. Any filters selected here will also apply to the plots in the data exploration tab."),
+        tags$li("The data exploration tab provides some graphical summaries of the data you selected, the plots that are available will depend on which of the two data points you'd like to plot and the histogram can be faceted"),
+      ),
+    ),
+    
+    # Create the Data Selection tab
+    tabPanel(
+      "Data Selection",
+      fluidRow(
+        column(
+          
+          # num of columns
+          2,
+          
+          # Drop down options for electronic category description
+          checkboxGroupInput(
+            "electronic_category_desc", 
+            "Electronic Category Description",
+            choices = c("Electronic Settlement", "Fully Electronic - All", 
+                        "Fully Electronic - FS", "Non-Electronic")
+          ),
+          
+          # Drop down options for channel type description
+          checkboxGroupInput(
+            "channel_type_desc", 
+            "Channel Type Description",
+            choices = c("Mail", "Bank", "Internet", "Over-the-Counter (OTC)")
+          ),
+          
+          # Drop down options for tax category description
+          checkboxGroupInput(
+            "tax_category_desc", 
+            "Tax Category Description",
+            choices = c("IRS Non-Tax", "IRS Tax", "Non-Tax")
+          ),
+          
+          # Input for calendar year range
+          sliderInput("record_calendar_year", "Calendar Year Range", min = 2000, max = 2024, value = c(2000, 2024), step = 1),
+          
+          # Input for calendar month range
+          sliderInput("record_calendar_month", "Calendar Month Range", min = 1, max = 12, value = c(1, 12), step = 1),
+          
+          # Input for number of rows
+          numericInput("rows", "Number of Rows to Return (max 10000)", value = 100, min = 1, max = 10000),
+          
+          # Column selection checkboxes
+          checkboxGroupInput(
+            "columns", 
+            "Select Columns", 
+            choices = c("Electronic Category Description" = "electronic_category_desc", 
+                        "Channel Type Description" = "channel_type_desc", 
+                        "Tax Category Description" = "tax_category_desc", 
+                        "Record Fiscal Year" = "record_fiscal_year", 
+                        "Record Calendar Year" = "record_calendar_year", 
+                        "Record Calendar Month" = "record_calendar_month"),
+            selected = c("electronic_category_desc", "channel_type_desc", "tax_category_desc", "record_fiscal_year", "record_calendar_year", "record_calendar_month")),
+          
+          # Message about mandatory columns
+          p("Note: 'record_date' and 'net_collections_amt' are always selected."),
+          
+          # Button to download the data
+          downloadButton("download_data", "Download Data")
+        ),
+        column(
+          10,
+          # Note about no data being displayed
+          p("Note: It may take a second for the data to load. If no data is displayed or an error is returned, it means no data meets the filter criteria or there's a problem with the API host. Try changing your filters or reloading to fix this"),
+          
+          # Show data table
+          tableOutput("data_table")
+        )
+      )
+    ),
+    
+    # Create the data exploration tab
+    tabPanel(
+      "Data Exploration",
+      fluidRow(
+        column(4,
+               selectInput("summary_var", "Variable to Summarize", choices = c("Net Collections Amount" = "net_collections_amt", "Count of Records" = "count"))
+        ),
+        column(4,
+               uiOutput("plot_type_ui")  # Dynamic UI for plot type
+        ),
+        column(4,
+               selectInput("contingency_var", "Variable to Partition by", 
+                           choices = c("Electronic Category Description" = "electronic_category_desc", 
+                                       "Channel Type Description" = "channel_type_desc", 
+                                       "Tax Category Description" = "tax_category_desc",
+                                       "Record Calendar Year" = "record_calendar_year"))
+        )
+      ),
+      
+      # Condition y-axis choices based on plot type and variable selection
+      conditionalPanel(
+        condition = "input.plot_type == 'Heatmap' && input.contingency_var != 'record_calendar_year'",
+        selectInput("y_axis_var", "Y-axis Variable", choices = c("Year" = "record_calendar_year", "Month" = "record_calendar_month"))
+      ),
+      
+      # Give a faceting option for the histogram
+      conditionalPanel(
+        condition = "input.plot_type == 'Histogram'",
+        checkboxInput("facet_histogram", "Facet by selected variable", value = FALSE)
+      ),
+      
+      # generate plot
+      plotOutput("plot"),
+      
+      # drop down for summary type selection
+      h4("Summary Type"),
+      selectInput("summary_type", "Type of Summary", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table")),
+      
+      # output selected summary type
+      verbatimTextOutput("summary_output")
+    )
+  )
+))
+
 
 # ==================================================================================
 # api notes
 # ==================================================================================
 
-# using this data
-  # https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
-
 # problems
-  # 1 api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
-  # 2 no documentation on this order that i could find, had to infer from testing urls
-  # 3 also when passing amonth you need to pass 8 as 08, 1 as 01, etc
+# 1 api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
+# no documentation on this order that i could find, had to infer from testing urls
+# also when passing amonth you need to pass 8 as 08, 1 as 01, etc
 
+# using this data
+# https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
 
-# working api filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  # https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
+# working url filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
 
 # ==================================================================================
 # server.R code
@@ -26,6 +194,8 @@ library(ggplot2)
 library(scales)
 library(httr)
 library(jsonlite)
+library(DT)
+library(purrr)
 
 # Define API function
 get_revenue_collections_data <- function(record_date = NULL, electronic_category_desc = NULL, channel_type_desc = NULL, tax_category_desc = NULL, 
@@ -125,16 +295,6 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
 # Define server logic
 shinyServer(function(input, output, session){
   
-  # Define a named vector for clean names and corresponding column names
-  clean_names <- c(
-    "Electronic Category Description" = "electronic_category_desc",
-    "Channel Type Description" = "channel_type_desc",
-    "Tax Category Description" = "tax_category_desc",
-    "Record Fiscal Year" = "record_fiscal_year",
-    "Record Calendar Year" = "record_calendar_year",
-    "Record Calendar Month" = "record_calendar_month"
-  )
-  
   # Reactive expression to fetch data based on user inputs in the UI
   fetch_data <- reactive({
     data <- get_revenue_collections_data(
@@ -215,25 +375,6 @@ shinyServer(function(input, output, session){
     }
   )
   
-  # Generate dynamic UI for plot type
-  output$plot_type_ui <- renderUI({
-    if (input$summary_var == "net_collections_amt") {
-      selectInput("plot_type", "Plot Type", choices = c("Histogram", "Boxplot", "Line Plot", "Heatmap"))
-    } else if (input$summary_var == "count") {
-      selectInput("plot_type", "Plot Type", choices = c("Line Plot", "Heatmap"))
-    }
-  })
-  
-  # Generate dynamic UI for y-axis variable in heatmap
-  output$y_axis_var_ui <- renderUI({
-    req(input$contingency_var)
-    
-    # List of all potential variables for y-axis with clean names
-    y_axis_choices <- setdiff(names(clean_names), names(clean_names)[clean_names == input$contingency_var])
-    
-    selectInput("y_axis_var", "Y-axis Variable", choices = y_axis_choices)
-  })
-  
   # Render plot based on user input
   output$plot <- renderPlot({
     data <- fetch_data()
@@ -285,7 +426,7 @@ shinyServer(function(input, output, session){
           theme_minimal()
       }
     } else if (input$plot_type == "Heatmap") {
-      y_axis <- clean_names[input$y_axis_var]
+      y_axis <- if (input$contingency_var == "record_calendar_year") "record_calendar_month" else input$y_axis_var
       heatmap_data <- data |>
         group_by(!!sym(input$contingency_var), !!sym(y_axis)) |>
         summarize(total_value = sum(!!sym(input$summary_var), na.rm = TRUE), .groups = "drop")
@@ -326,6 +467,15 @@ shinyServer(function(input, output, session){
     
     # Print summaries
     print(summary_data)
+  })
+  
+  # Generate dynamic UI for plot type
+  output$plot_type_ui <- renderUI({
+    if (input$summary_var == "net_collections_amt") {
+      selectInput("plot_type", "Plot Type", choices = c("Histogram", "Boxplot", "Line Plot", "Heatmap"))
+    } else if (input$summary_var == "count") {
+      selectInput("plot_type", "Plot Type", choices = c("Line Plot", "Heatmap"))
+    }
   })
   
   # Sync the main panel tabs with the sidebar tabs

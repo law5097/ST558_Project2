@@ -2,7 +2,7 @@
 # ui.R code
 # ==================================================================================
 
-# Define UI for the application
+# ui.R code
 shinyUI(fluidPage(
   tags$style(HTML("
     body {
@@ -59,10 +59,7 @@ shinyUI(fluidPage(
       "Data Selection",
       fluidRow(
         column(
-          
-          # num of columns
           2,
-          
           # Drop down options for electronic category description
           checkboxGroupInput(
             "electronic_category_desc", 
@@ -92,7 +89,7 @@ shinyUI(fluidPage(
           sliderInput("record_calendar_month", "Calendar Month Range", min = 1, max = 12, value = c(1, 12), step = 1),
           
           # Input for number of rows
-          numericInput("rows", "Number of Rows to Return (max 10000)", value = 100, min = 1, max = 10000),
+          numericInput("rows", "Number of Rows to Return (max 10000)", value = 500, min = 1, max = 10000),
           
           # Column selection checkboxes
           checkboxGroupInput(
@@ -144,8 +141,8 @@ shinyUI(fluidPage(
       
       # Condition y-axis choices based on plot type and variable selection
       conditionalPanel(
-        condition = "input.plot_type == 'Heatmap' && input.contingency_var != 'record_calendar_year'",
-        selectInput("y_axis_var", "Y-axis Variable", choices = c("Year" = "record_calendar_year", "Month" = "record_calendar_month"))
+        condition = "input.plot_type == 'Heatmap'",
+        uiOutput("y_axis_var_ui")
       ),
       
       # Give a faceting option for the histogram
@@ -166,4 +163,3 @@ shinyUI(fluidPage(
     )
   )
 ))
-
