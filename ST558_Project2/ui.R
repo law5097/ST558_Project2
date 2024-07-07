@@ -2,8 +2,10 @@
 # ui.R code
 # ==================================================================================
 
-# ui.R code
+# Fluid page code
 shinyUI(fluidPage(
+  
+  # Background color
   tags$style(HTML("
     body {
       background-color: #fcfcfc;
@@ -51,7 +53,7 @@ shinyUI(fluidPage(
         tags$li("The about tab is here to give some introductionary info about the app, as well as links to resources to learn more about the data"),
         tags$li("The data selection tab allows you to query the API live with filters you specify, as well as download the data as a csv file. Any filters selected here will also apply to the plots in the data exploration tab."),
         tags$li("The data exploration tab provides some graphical summaries of the data you selected, the plots that are available will depend on which of the two data points you'd like to plot and the histogram can be faceted"),
-      ),
+      )
     ),
     
     # Create the Data Selection tab
@@ -98,10 +100,9 @@ shinyUI(fluidPage(
             choices = c("Electronic Category Description" = "electronic_category_desc", 
                         "Channel Type Description" = "channel_type_desc", 
                         "Tax Category Description" = "tax_category_desc", 
-                        "Record Fiscal Year" = "record_fiscal_year", 
                         "Record Calendar Year" = "record_calendar_year", 
                         "Record Calendar Month" = "record_calendar_month"),
-            selected = c("electronic_category_desc", "channel_type_desc", "tax_category_desc", "record_fiscal_year", "record_calendar_year", "record_calendar_month")),
+            selected = c("electronic_category_desc", "channel_type_desc", "tax_category_desc", "record_calendar_year", "record_calendar_month")),
           
           # Message about mandatory columns
           p("Note: 'record_date' and 'net_collections_amt' are always selected."),
@@ -110,9 +111,12 @@ shinyUI(fluidPage(
           downloadButton("download_data", "Download Data")
         ),
         column(
+          
+          # Width
           10,
+          
           # Note about no data being displayed
-          p("Note: It may take a second for the data to load. If no data is displayed or an error is returned, it means no data meets the filter criteria or there's a problem with the API host. Try changing your filters or reloading to fix this"),
+          p("Note: It may take a second for the data to load. If no data is displayed or an error is returned it means no data meets the filter criteria or there's a problem with the API host, try changing your filters or restarting R to fix this"),
           
           # Show data table
           tableOutput("data_table")
@@ -124,24 +128,31 @@ shinyUI(fluidPage(
     tabPanel(
       "Data Exploration",
       fluidRow(
+        
+        # Variable selection
         column(4,
                selectInput("summary_var", "Variable to Summarize", choices = c("Net Collections Amount" = "net_collections_amt", "Count of Records" = "count"))
         ),
+        
+        # Dynamic UI for plot type, changes based on select variable
         column(4,
-               uiOutput("plot_type_ui")  # Dynamic UI for plot type
+               uiOutput("plot_type_ui") 
         ),
+        
+        # Selection of secondary variable
         column(4,
                selectInput("contingency_var", "Variable to Partition by", 
                            choices = c("Electronic Category Description" = "electronic_category_desc", 
                                        "Channel Type Description" = "channel_type_desc", 
                                        "Tax Category Description" = "tax_category_desc",
-                                       "Record Calendar Year" = "record_calendar_year"))
+                                       "Record Calendar Year" = "record_calendar_year",
+                                       "Record Calendar Month" = "record_calendar_month"))
         )
       ),
       
       # Condition y-axis choices based on plot type and variable selection
       conditionalPanel(
-        condition = "input.plot_type == 'Heatmap'",
+        condition = "input.plot_type == 'Heat map'",
         uiOutput("y_axis_var_ui")
       ),
       
@@ -151,14 +162,26 @@ shinyUI(fluidPage(
         checkboxInput("facet_histogram", "Facet by selected variable", value = FALSE)
       ),
       
-      # generate plot
+      # Generate plot
       plotOutput("plot"),
       
-      # drop down for summary type selection
-      h4("Summary Type"),
-      selectInput("summary_type", "Type of Summary", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table")),
+      # Drop down for summary type selection and second variable selection
+      fluidRow(
+        
+        # Main drop down
+        column(4,
+               h4("Summary Tables"),
+               selectInput("summary_type", "Type of Summary", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table"))
+        ),
+        
+        # Dynamic drop down dependent on summary selection
+        column(4,
+               h4("."),
+               uiOutput("second_var_ui")  
+        )
+      ),
       
-      # output selected summary type
+      # Output selected summary type
       verbatimTextOutput("summary_output")
     )
   )

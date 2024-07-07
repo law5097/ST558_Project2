@@ -42,29 +42,50 @@ library(purrr)
 #| warning: FALSE
 #| message: FALSE
 
-# define api function
-get_revenue_collections_data <- function(record_date = NULL, electronic_category_desc = NULL, channel_type_desc = NULL, tax_category_desc = NULL, 
-                                         record_fiscal_year = NULL, record_calendar_year = NULL, record_calendar_month = NULL, 
-                                         format = "json", page_number = 1, page_size = 1000) {
+# Define API function
+get_revenue_collections_data <- function(
+    record_date = NULL, 
+    electronic_category_desc = NULL, 
+    channel_type_desc = NULL, 
+    tax_category_desc = NULL, 
+    record_fiscal_year = NULL, 
+    record_calendar_year = NULL, 
+    record_calendar_month = NULL, 
+    format = "json", 
+    page_number = 1, 
+    page_size = 1000){
   
   # Set base URL and endpoint
   base_url <- 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/'
   end_point <- 'v2/revenue/rcm'
   full_url <- paste0(base_url, end_point)
   
-  # URL Encoding Function
+  # baseR URL encoding function - this puts the text in a url friendly format, such as removing spaces
   url_encode <- function(value) {
     return(URLencode(as.character(value), reserved = TRUE))
   }
   
   # Function to put the filters in a string format the API expects
-  build_filter <- function(field, value) {
-    if (!is.null(value) && value != "") {
-      return(paste0(field, ":eq:", url_encode(value)))
+  build_filter <- function(field, value, operator = "eq") {
+    
+    # Check if there's any value 
+    if (!is.null(value) && length(value) > 0) {
+      
+      # If there's more than a single value passed, wrap it in IN
+      if (length(value) > 1) {
+        return(paste0(field, ":in:(", paste(url_encode(value), collapse = ","), ")"))
+      } 
+      # Otherwise just paste the single value that was passed with the default operator, eq
+      else {
+        return(paste0(field, ":", operator, ":", url_encode(value)))
+      }
     }
+    
+    # Return nada if there's no value
     return(NULL)
   }
   
+  # Function to put the RANGE filters in a string format the API expects
   build_range_filter <- function(field, values) {
     if (!is.null(values) && length(values) == 2) {
       gte_value <- values[1]
@@ -81,7 +102,7 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
     return(NULL)
   }
   
-  # Create filters in the specified order
+  # Take the given inputs and put them in the necessary format, using my functions above
   filters <- c(
     build_range_filter("record_calendar_year", record_calendar_year),
     build_range_filter("record_calendar_month", record_calendar_month),
@@ -107,8 +128,8 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
   query_string <- paste0("filter=", filter_string, "&format=", format, "&page[number]=", page_number, "&page[size]=", page_size)
   full_query_url <- paste0(full_url, "?", query_string)
   
-  # debugging @@@@@@@@@@@@@@@@@@@@@
-  print(full_query_url)
+  # Print for debugging @@@@@@@@@@@@@@@@@@@@@
+  # print(full_query_url)
   
   # Get the data from the API
   url_data <- httr::GET(full_query_url)
@@ -125,8 +146,8 @@ get_revenue_collections_data <- function(record_date = NULL, electronic_category
     pluck("data") |>
     as_tibble()
   
-  # Print a glimpse of the data for debugging
-  print(head(data))
+  # Print for debugging @@@@@@@@@@@@@@@@@@@@@
+  # print(head(data))
   
   # Return the results
   return(data)
@@ -150,10 +171,6 @@ max(revenue_data$record_date)
 
 ```
 
-```{r}
- httr::GET("https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm")
-```
-
 ## 2 Data summary functions
 
 ### Contingency table
@@ -164,8 +181,8 @@ max(revenue_data$record_date)
 
 # contingency table
 contingency_table <- revenue_data |>
-  group_by(channel_type_desc) |>
-  drop_na(channel_type_desc) |>
+  group_by(record_calendar_year) |>
+  drop_na(record_calendar_year) |>
   summarize(count = n())
 
 # show results

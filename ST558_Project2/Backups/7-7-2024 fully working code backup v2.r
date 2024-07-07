@@ -1,3 +1,192 @@
+# ==================================================================================
+# ui.R code
+# ==================================================================================
+
+# Fluid page code
+shinyUI(fluidPage(
+  
+  # Background color
+  tags$style(HTML("
+    body {
+      background-color: #fcfcfc;
+    }
+  ")),
+  
+  # App title
+  titlePanel("ST 558 Project 2 - Lee Worthington"),
+  
+  # Create tabs
+  tabsetPanel(
+    id = "tabs",
+    
+    # Create the about tab
+    tabPanel(
+      "About",
+      img(src = "logo.png", height = "100px"),  # Correct path
+      
+      h3("About the App"),
+      p("This app allows users to:"),
+      tags$ul(
+        tags$li("Query U.S. Government Revenue Collections API"),
+        tags$li("Define the filters sent to the API"),
+        tags$li("Define the columns returned by the API"),
+        tags$li("Download the data as a csv"),
+        tags$li("Generate summary plots/statistics based on user selections")
+      ),
+      p("Please note the following:"),
+      tags$ul(
+        tags$li("Because this app allows the user to query the API freely, certain combinations of filters may return an error as there is no data that meet the given criteria"),
+        tags$li("Similarly, some combinations of filters may only have data in certain years"),
+        tags$li("There is a 10000 record limit on the api, so if you try to return everything you'll only get the first 10000 records")
+      ),
+      
+      h3("Data source"),
+      p("Here's a brief description of the data from the treasury department:"),
+      tags$ul(
+        tags$li("The U.S. Government Revenue Collections dataset provides a daily overview of federal revenue collections such as individual and corporate income tax deposits, customs duties, fees for government service, fines, and loan repayments. These collections can be made through either electronic or non-electronic transactions by mail, internet, bank, or over-the-counter channels."),
+        tags$li("More information about this data can be found in this link: https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections")
+      ),
+      
+      h3("About the tabs"),
+      p("There are 3 different tabs in this app, with the following purposes:"),
+      tags$ul(
+        tags$li("The about tab is here to give some introductionary info about the app, as well as links to resources to learn more about the data"),
+        tags$li("The data selection tab allows you to query the API live with filters you specify, as well as download the data as a csv file. Any filters selected here will also apply to the plots in the data exploration tab."),
+        tags$li("The data exploration tab provides some graphical summaries of the data you selected, the plots that are available will depend on which of the two data points you'd like to plot and the histogram can be faceted"),
+      ),
+    ),
+    
+    # Create the Data Selection tab
+    tabPanel(
+      "Data Selection",
+      fluidRow(
+        column(
+          2,
+          # Drop down options for electronic category description
+          checkboxGroupInput(
+            "electronic_category_desc", 
+            "Electronic Category Description",
+            choices = c("Electronic Settlement", "Fully Electronic - All", 
+                        "Fully Electronic - FS", "Non-Electronic")
+          ),
+          
+          # Drop down options for channel type description
+          checkboxGroupInput(
+            "channel_type_desc", 
+            "Channel Type Description",
+            choices = c("Mail", "Bank", "Internet", "Over-the-Counter (OTC)")
+          ),
+          
+          # Drop down options for tax category description
+          checkboxGroupInput(
+            "tax_category_desc", 
+            "Tax Category Description",
+            choices = c("IRS Non-Tax", "IRS Tax", "Non-Tax")
+          ),
+          
+          # Input for calendar year range
+          sliderInput("record_calendar_year", "Calendar Year Range", min = 2000, max = 2024, value = c(2000, 2024), step = 1),
+          
+          # Input for calendar month range
+          sliderInput("record_calendar_month", "Calendar Month Range", min = 1, max = 12, value = c(1, 12), step = 1),
+          
+          # Input for number of rows
+          numericInput("rows", "Number of Rows to Return (max 10000)", value = 500, min = 1, max = 10000),
+          
+          # Column selection checkboxes
+          checkboxGroupInput(
+            "columns", 
+            "Select Columns", 
+            choices = c("Electronic Category Description" = "electronic_category_desc", 
+                        "Channel Type Description" = "channel_type_desc", 
+                        "Tax Category Description" = "tax_category_desc", 
+                        "Record Fiscal Year" = "record_fiscal_year", 
+                        "Record Calendar Year" = "record_calendar_year", 
+                        "Record Calendar Month" = "record_calendar_month"),
+            selected = c("electronic_category_desc", "channel_type_desc", "tax_category_desc", "record_fiscal_year", "record_calendar_year", "record_calendar_month")),
+          
+          # Message about mandatory columns
+          p("Note: 'record_date' and 'net_collections_amt' are always selected."),
+          
+          # Button to download the data
+          downloadButton("download_data", "Download Data")
+        ),
+        column(
+          
+          # Width
+          10,
+          
+          # Note about no data being displayed
+          p("Note: It may take a second for the data to load. If no data is displayed or an error is returned, it means no data meets the filter criteria or there's a problem with the API host. Try changing your filters or reloading to fix this"),
+          
+          # Show data table
+          tableOutput("data_table")
+        )
+      )
+    ),
+    
+    # Create the data exploration tab
+    tabPanel(
+      "Data Exploration",
+      fluidRow(
+        
+        # Variable selection
+        column(4,
+               selectInput("summary_var", "Variable to Summarize", choices = c("Net Collections Amount" = "net_collections_amt", "Count of Records" = "count"))
+        ),
+        
+        # Dynamic UI for plot type, changes based on select variable
+        column(4,
+               uiOutput("plot_type_ui") 
+        ),
+        
+        # Selection of secondary variable
+        column(4,
+               selectInput("contingency_var", "Variable to Partition by", 
+                           choices = c("Electronic Category Description" = "electronic_category_desc", 
+                                       "Channel Type Description" = "channel_type_desc", 
+                                       "Tax Category Description" = "tax_category_desc",
+                                       "Record Calendar Year" = "record_calendar_year"))
+        )
+      ),
+      
+      # Condition y-axis choices based on plot type and variable selection
+      conditionalPanel(
+        condition = "input.plot_type == 'Heatmap'",
+        uiOutput("y_axis_var_ui")
+      ),
+      
+      # Give a faceting option for the histogram
+      conditionalPanel(
+        condition = "input.plot_type == 'Histogram'",
+        checkboxInput("facet_histogram", "Facet by selected variable", value = FALSE)
+      ),
+      
+      # Generate plot
+      plotOutput("plot"),
+      
+      # Drop down for summary type selection and second variable selection
+      fluidRow(
+        
+        # Main drop down
+        column(4,
+               h4("Summary Tables"),
+               selectInput("summary_type", "Type of Summary", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table"))
+        ),
+        
+        # Dynamic drop down dependent on summary selection
+        column(4,
+               h4("."),
+               uiOutput("second_var_ui")  
+        )
+      ),
+      
+      # Output selected summary type
+      verbatimTextOutput("summary_output")
+    )
+  )
+))
+
 
 # ==================================================================================
 # api notes
@@ -33,6 +222,7 @@ get_revenue_collections_data <- function(
     electronic_category_desc = NULL, 
     channel_type_desc = NULL, 
     tax_category_desc = NULL, 
+    record_fiscal_year = NULL, 
     record_calendar_year = NULL, 
     record_calendar_month = NULL, 
     format = "json", 
@@ -149,6 +339,7 @@ shinyServer(function(input, output, session){
     "Electronic Category Description" = "electronic_category_desc",
     "Channel Type Description" = "channel_type_desc",
     "Tax Category Description" = "tax_category_desc",
+    "Record Fiscal Year" = "record_fiscal_year",
     "Record Calendar Year" = "record_calendar_year",
     "Record Calendar Month" = "record_calendar_month"
   )
@@ -160,6 +351,7 @@ shinyServer(function(input, output, session){
       electronic_category_desc = input$electronic_category_desc,
       channel_type_desc = input$channel_type_desc,
       tax_category_desc = input$tax_category_desc,
+      record_fiscal_year = input$record_fiscal_year,
       record_calendar_year = c(input$record_calendar_year[1], input$record_calendar_year[2]),
       record_calendar_month = c(input$record_calendar_month[1], input$record_calendar_month[2]),
       page_number = 1, 
@@ -171,7 +363,7 @@ shinyServer(function(input, output, session){
       mutate(
         net_collections_amt = as.numeric(net_collections_amt),
         record_calendar_year = as.factor(record_calendar_year),
-        record_calendar_month = as.factor(record_calendar_month)
+        record_calendar_month = as.integer(record_calendar_month)
       )
     
     # Print for debugging @@@@@@@@@@@@@@@@@@@@@
@@ -204,15 +396,15 @@ shinyServer(function(input, output, session){
     
     # Define plots and summaries for net_collections_amt
     if (input$summary_var == "net_collections_amt") {
-      plot_types <- c("Histogram", "Box plot", "Line plot", "Heat map")
+      plot_types <- c("Histogram", "Boxplot", "Line Plot", "Heatmap")
       updateSelectInput(session, "plot_type", choices = plot_types, selected = if (!is.null(current_plot_type) && current_plot_type %in% plot_types) current_plot_type else "Histogram")
       updateSelectInput(session, "summary_type", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table"))
     } 
     
     # Define plots and summaries for count data
     else if (input$summary_var == "count") {
-      plot_types <- c("Line plot", "Heat map")
-      updateSelectInput(session, "plot_type", choices = plot_types, selected = if (!is.null(current_plot_type) && current_plot_type %in% plot_types) current_plot_type else "Heat map")
+      plot_types <- c("Line Plot", "Heatmap")
+      updateSelectInput(session, "plot_type", choices = plot_types, selected = if (!is.null(current_plot_type) && current_plot_type %in% plot_types) current_plot_type else "Heatmap")
       updateSelectInput(session, "summary_type", choices = c("Contingency Table" = "contingency_table"))
     }
   })
@@ -241,13 +433,13 @@ shinyServer(function(input, output, session){
     
     # If the selection variable is amount, return these plots
     if (input$summary_var == "net_collections_amt") {
-      selectInput("plot_type", "Plot Type", choices = c("Histogram", "Box plot", "Line plot", "Heat map"), selected = "Histogram")
+      selectInput("plot_type", "Plot Type", choices = c("Histogram", "Boxplot", "Line Plot", "Heatmap"), selected = "Histogram")
     } else if (input$summary_var == "count") {
-      selectInput("plot_type", "Plot Type", choices = c("Line plot", "Heat map"), selected = "Heat map")
+      selectInput("plot_type", "Plot Type", choices = c("Line Plot", "Heatmap"), selected = "Heatmap")
     }
   })
   
-  # Generate dynamic UI for y-axis variable in heat map
+  # Generate dynamic UI for y-axis variable in heatmap
   output$y_axis_var_ui <- renderUI({
     req(input$contingency_var)
     
@@ -276,7 +468,7 @@ shinyServer(function(input, output, session){
     
     # Extract date range and format as "Month YYYY"
     date_range_year <- range(as.numeric(as.character(data$record_calendar_year)), na.rm = TRUE)
-    date_range_month <- range(as.numeric(as.character(data$record_calendar_month)), na.rm = TRUE)
+    date_range_month <- range(data$record_calendar_month, na.rm = TRUE)
     min_date <- paste(month.name[date_range_month[1]], date_range_year[1])
     max_date <- paste(month.name[date_range_month[2]], date_range_year[2])
     date_range_text <- paste(min_date, "to", max_date)
@@ -287,7 +479,6 @@ shinyServer(function(input, output, session){
         mutate(count = 1)
     }
     
-    # Define histogram code
     if (input$plot_type == "Histogram") {
       p <- ggplot(data, aes_string(x = input$summary_var, fill = input$contingency_var)) +
         geom_histogram(bins = 25, alpha = 0.5, position = "stack") +
@@ -300,20 +491,14 @@ shinyServer(function(input, output, session){
       }
       
       print(p)
-    } 
-    
-    # Define box plot code
-    else if (input$plot_type == "Box plot") {
+    } else if (input$plot_type == "Boxplot") {
       ggplot(data, aes_string(x = input$contingency_var, y = input$summary_var, fill = input$contingency_var)) +
         geom_boxplot(alpha = 0.5) +
-        labs(title = paste("Box plots of", input$summary_var, "by", input$contingency_var, "between", date_range_text), x = input$contingency_var, y = input$summary_var) +
+        labs(title = paste("Distribution of", input$summary_var, "by", input$contingency_var, "between", date_range_text), x = input$contingency_var, y = input$summary_var) +
         scale_y_log10(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         theme_minimal() +
         theme(legend.position = "none")
-    } 
-    
-    # Define line plot code
-    else if (input$plot_type == "Line plot") {
+    } else if (input$plot_type == "Line Plot") {
       if (input$contingency_var == "record_calendar_year") {
         ggplot(data, aes(x = as.factor(record_calendar_year), y = !!sym(input$summary_var), group = 1)) +
           stat_summary(fun = sum, geom = "line") +
@@ -323,14 +508,11 @@ shinyServer(function(input, output, session){
       } else {
         ggplot(data, aes_string(x = "as.factor(record_calendar_year)", y = input$summary_var, color = input$contingency_var, group = input$contingency_var)) +
           stat_summary(fun = sum, geom = "line") +
-          labs(title = paste("Line plot of", input$summary_var, "by Year and", input$contingency_var, "between", date_range_text), x = "Year", y = input$summary_var) +
+          labs(title = paste(input$summary_var, "by Year and", input$contingency_var, "between", date_range_text), x = "Year", y = input$summary_var) +
           scale_y_continuous(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
           theme_minimal()
       }
-    } 
-    
-    # Define heat map code
-    else if (input$plot_type == "Heat map") {
+    } else if (input$plot_type == "Heatmap") {
       y_axis <- clean_names[input$y_axis_var]
       heatmap_data <- data |>
         group_by(!!sym(input$contingency_var), !!sym(y_axis)) |>
@@ -339,7 +521,7 @@ shinyServer(function(input, output, session){
       ggplot(heatmap_data, aes_string(x = input$contingency_var, y = y_axis, fill = "total_value")) +
         geom_tile(alpha = 0.5) +
         geom_text(aes(label = if (input$summary_var == "net_collections_amt") scales::dollar(total_value) else total_value), color = "black", size = 3) +
-        labs(title = paste("Heat map of", input$summary_var, "by", input$contingency_var, "and", y_axis, "between", date_range_text), x = input$contingency_var, y = y_axis, fill = input$summary_var) +
+        labs(title = paste("Heatmap of", input$summary_var, "by", input$contingency_var, "and", y_axis, "between", date_range_text), x = input$contingency_var, y = y_axis, fill = input$summary_var) +
         scale_fill_gradient(low = "lightgreen", high = "darkgreen", labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         theme_minimal()
     }
