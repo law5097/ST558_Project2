@@ -24,5 +24,9 @@ install.packages(c("shiny", "dplyr", "ggplot2", "scales", "httr", "jsonlite", "D
 
 ## Code to run the app in RStudio
 ```R
+<<<<<<< HEAD
 shiny::runGitHub("law5097/ST558_Project2", subdir = "ST558_Project2")
+=======
+shiny::runGitHub("law5097/ST558_Project2")
+>>>>>>> 081982192812dbf3c580b04962ac3d8514a83446
 ```
