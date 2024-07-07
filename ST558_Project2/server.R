@@ -25,6 +25,8 @@ library(scales)
 library(httr)
 library(jsonlite)
 library(tidyr)
+library(DT)
+library(purrr)
 
 # Define API function
 get_revenue_collections_data <- function(

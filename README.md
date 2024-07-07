@@ -19,7 +19,7 @@ To install all the necessary packages, run the following line of code in R:
 
 ## Code to install necessary packages
 ```R
-install.packages(c("shiny", "dplyr", "ggplot2", "scales", "httr", "jsonlite", "DT", "purrr"))
+install.packages(c("shiny", "dplyr", "ggplot2", "scales", "httr", "jsonlite", "tidyr", "DT", "purrr"))
 ```
 
 ## Code to run the app in RStudio
