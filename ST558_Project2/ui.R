@@ -92,12 +92,12 @@ shinyUI(fluidPage(
           sliderInput("record_calendar_month", "Calendar Month Range", min = 1, max = 12, value = c(1, 12), step = 1),
           
           # Input for number of rows
-          numericInput("rows", "Number of Rows to Return (max 10000)", value = 5000, min = 1, max = 10000),
+          numericInput("rows", "Number of Rows to Return (max 10000)", value = 100, min = 1, max = 10000),
           
           # Column selection checkboxes
           checkboxGroupInput(
             "columns", 
-            "Select Columns to Display", 
+            "Select Columns", 
             choices = c("Electronic Category Description" = "electronic_category_desc", 
                         "Channel Type Description" = "channel_type_desc", 
                         "Tax Category Description" = "tax_category_desc", 

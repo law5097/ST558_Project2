@@ -148,6 +148,9 @@ shinyServer(function(input, output, session){
         record_calendar_month = as.integer(record_calendar_month)
       )
     
+    # Print for debugging
+    print(head(data))
+    
     # return results
     return(data)
   })
@@ -159,6 +162,9 @@ shinyServer(function(input, output, session){
     # Select only the columns chosen by the user + mandatory defaults
     selected_columns <- c("record_date", "net_collections_amt", input$columns)
     data <- data |> select(all_of(selected_columns))
+    
+    # Print for debugging
+    print(head(data))
     
     # return selection
     return(data)
@@ -186,6 +192,7 @@ shinyServer(function(input, output, session){
   
   # Render data table without
   output$data_table <- renderDataTable({
+    req(fetch_table_data())  # Ensure data is available
     datatable(fetch_table_data(), options = list(dom = 't', pageLength = 20))  # 't' removes the table control elements
   })
   
@@ -289,7 +296,7 @@ shinyServer(function(input, output, session){
         count(!!sym(input$contingency_var))
     }
     
-    # Print sumnmaries
+    # Print summaries
     print(summary_data)
   })
   
@@ -307,4 +314,3 @@ shinyServer(function(input, output, session){
     updateTabsetPanel(session, "main_tabs", selected = input$tabs)
   })
 })
-
