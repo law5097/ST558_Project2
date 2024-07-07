@@ -25,7 +25,7 @@ shinyUI(fluidPage(
       h3("About the App"),
       p("This app allows users to:"),
       tags$ul(
-        tags$li("Query U.S. Government Revenue Collections API. Revenue collections refers to things like taxes, so this app is essentially detailing government income."),
+        tags$li("Query U.S. Government Revenue Collections API"),
         tags$li("Define the filters sent to the API"),
         tags$li("Define the columns returned by the API"),
         tags$li("Download the data as a csv"),
@@ -115,7 +115,7 @@ shinyUI(fluidPage(
         column(
           10,
           # Note about no data being displayed
-          p("Note: If no data is displayed or an error is returned, it means no data meets the filter criteria or there's a problem with the API host. Try changing your filters or reloading to fix this"),
+          p("Note: It may take a second for the data to load. If no data is displayed or an error is returned, it means no data meets the filter criteria or there's a problem with the API host. Try changing your filters or reloading to fix this"),
           
           # Show data table
           dataTableOutput("data_table")

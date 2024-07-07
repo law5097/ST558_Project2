@@ -6,14 +6,13 @@
 # problems
 # 1 api seems to fail if you don't pass filters in this order: calendar year > calendar month > electronic category > tax category > channel type
 # no documentation on this order that i could find, had to infer from testing urls
-# 2 also when passing a month you need to pass 8 as 08, 1 as 01, etc
-
-# working url filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
+# also when passing amonth you need to pass 8 as 08, 1 as 01, etc
 
 # using this data
 # https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections
 
+# working url filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
 
 # ==================================================================================
 # server.R code
