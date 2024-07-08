@@ -163,7 +163,7 @@ shinyUI(fluidPage(
       # Give a faceting option for the histogram
       conditionalPanel(
         condition = "input.plot_type == 'Histogram'",
-        checkboxInput("facet_histogram", "Facet by selected variable", value = FALSE)
+        checkboxInput("facet_histogram", "Facet by selected partition variable", value = FALSE)
       ),
       
       # Generate plot
