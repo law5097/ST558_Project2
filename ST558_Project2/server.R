@@ -10,7 +10,7 @@
 # 2 no documentation on this order that i could find, had to infer from testing urls
 # 3 also when passing a month you need to pass 8 as 08, 1 as 01, etc
 
-# working api filters @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# working api filters @@
 # https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/revenue/rcm?filter=electronic_category_desc:eq:Fully%20Electronic%20-%20All,channel_type_desc:eq:Bank,tax_category_desc:eq:IRS%20Tax,record_calendar_year:eq:2004,record_calendar_month:eq:10&format=json&page[number]=1&page[size]=1000
 
 # ==================================================================================
@@ -114,7 +114,7 @@ get_revenue_collections_data <- function(
   query_string <- paste0("filter=", filter_string, "&format=", format, "&page[number]=", page_number, "&page[size]=", page_size)
   full_query_url <- paste0(full_url, "?", query_string)
   
-  # Print for debugging @@@@@@@@@@@@@@@@@@@@@
+  # Print for debugging @@
   # print(full_query_url)
   
   # Get the data from the API
@@ -132,7 +132,7 @@ get_revenue_collections_data <- function(
     pluck("data") |>
     as_tibble()
   
-  # Print for debugging @@@@@@@@@@@@@@@@@@@@@
+  # Print for debugging @@
   # print(head(data))
   
   # Return the results
@@ -185,7 +185,7 @@ shinyServer(function(input, output, session){
       ) |>
       filter(!is.na(net_collections_amt) & net_collections_amt > 0)
     
-    # Print for debugging @@@@@@@@@@@@@@@@@@@@@
+    # Print for debugging @@
     # print(head(data))
     
     # return results
@@ -202,7 +202,7 @@ shinyServer(function(input, output, session){
       select(all_of(selected_columns)) |>
       mutate(net_collections_amt = scales::dollar(net_collections_amt, scale = 1, accuracy = 0.01))
     
-    # Print for debugging @@@@@@@@@@@@@@@@@@@@@
+    # Print for debugging @@
     # print(head(data))
     
     # return selection
@@ -323,7 +323,7 @@ shinyServer(function(input, output, session){
     if (input$plot_type == "Histogram"){
       p <- ggplot(data, aes(x = !!sym(input$summary_var), fill = !!sym(input$contingency_var))) +
         geom_histogram(bins = 25, alpha = 0.5, position = "stack") +
-        labs(title = paste("Histogram of", input$summary_var, "between", date_range_text), x = input$summary_var, y = "Count") +
+        labs(title = paste("Histogram(s) of", input$summary_var, "by", input$contingency_var, "between", date_range_text), x = input$summary_var, y = "Count") +
         scale_x_log10(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         base_theme
       
@@ -338,7 +338,7 @@ shinyServer(function(input, output, session){
     else if (input$plot_type == "Box plot"){
       p <- ggplot(data, aes(x = !!sym(input$contingency_var), y = !!sym(input$summary_var), fill = !!sym(input$contingency_var))) +
         geom_boxplot(alpha = 0.5) +
-        labs(title = paste("Box plots of total", input$summary_var, "by", input$contingency_var, "between", date_range_text), x = input$contingency_var, y = input$summary_var) +
+        labs(title = paste("Box plot(s) of total", input$summary_var, "by", input$contingency_var, "between", date_range_text), x = input$contingency_var, y = input$summary_var) +
         scale_y_log10(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         base_theme +
         theme(legend.position = "none")
@@ -357,7 +357,7 @@ shinyServer(function(input, output, session){
       if (input$contingency_var %in% c("record_calendar_year", "record_fiscal_year")){
         p <- ggplot(data, aes(x = as.numeric(record_calendar_month), y = !!sym(input$summary_var), color = as.factor(!!sym(input$contingency_var)), group = !!sym(input$contingency_var))) +
           geom_line(stat = "summary", fun = sum) +
-          labs(title = paste(input$summary_var, "by Month and", input$contingency_var), x = "Record Month", y = input$summary_var, color = "Year") +
+          labs(title = paste("Line plot(s) of total", input$summary_var, "by record_calendar_month and", input$contingency_var, "between", date_range_text), x = "Record Month", y = input$summary_var, color = "Year") +
           scale_x_continuous(breaks = 1:12, labels = month.name) +
           scale_y_continuous(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
           base_theme
@@ -367,7 +367,7 @@ shinyServer(function(input, output, session){
       else {
         p <- ggplot(data, aes(x = as.factor(record_calendar_year), y = !!sym(input$summary_var), color = !!sym(input$contingency_var), group = !!sym(input$contingency_var))) +
           geom_line(stat = "summary", fun = sum) +
-          labs(title = paste("Line plot of total", input$summary_var, "by Year and", input$contingency_var, "between", date_range_text), x = "Record Year", y = input$summary_var) +
+          labs(title = paste("Line plot(s) of total", input$summary_var, "by record_calendar_year and", input$contingency_var, "between", date_range_text), x = "Record Year", y = input$summary_var) +
           scale_y_continuous(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
           base_theme
       }
@@ -387,15 +387,16 @@ shinyServer(function(input, output, session){
       y_axis <- clean_names[input$y_axis_var]
       req(y_axis)
       
-      # Generate heat map
+      # Generate heat map data
       heatmap_data <- data |>
         group_by(!!sym(input$contingency_var), !!sym(y_axis)) |>
         summarize(total_value = sum(!!sym(input$summary_var), na.rm = TRUE), .groups = "drop")
       
+      # Plot heat map
       ggplot(heatmap_data, aes(x = !!sym(input$contingency_var), y = !!sym(y_axis), fill = total_value)) +
         geom_tile(alpha = 0.5) +
         geom_text(aes(label = if (input$summary_var == "net_collections_amt") scales::dollar(total_value) else scales::comma(total_value)), color = "black", size = rel(5), fontface = "bold") +
-        labs(title = paste("Heat map of total", input$summary_var, "by", input$contingency_var, "and", input$y_axis, "between", date_range_text), x = input$contingency_var, y = input$y_axis, fill = input$summary_var) +
+        labs(title = paste("Heat map of total", input$summary_var, "by", input$contingency_var, "and", clean_names[input$y_axis_var], "between", date_range_text), x = input$contingency_var, y = clean_names[input$y_axis_var], fill = input$summary_var) +
         scale_fill_gradient(low = "#E6FFE3", high = "#7DFC6E", labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
         base_theme
     }
@@ -435,8 +436,8 @@ shinyServer(function(input, output, session){
     # Define output if user selects contingency table
     else if (input$summary_type == "contingency_table"){
       
-      # Print debugging information @@@@@@@@@@@@@@@@
-      # Your issue here was the internal vs Ui names were not aligning, needed to convert back below
+      # Print debugging information @@
+      # My issue here was the internal vs Ui names were not aligning, needed to convert back below
       #print(paste("contingency_var:", input$contingency_var))
       #print(paste("second_var:", input$second_var))
       #print(paste("clean_names:", clean_names[input$second_var]))
