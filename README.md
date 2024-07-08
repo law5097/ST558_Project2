@@ -7,6 +7,7 @@ This Shiny app allows users to query the U.S. Government Revenue Collections API
 The following packages are required to run the app:
 - shiny
 - dplyr
+- tidyr
 - ggplot2
 - scales
 - httr

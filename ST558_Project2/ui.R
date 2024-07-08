@@ -2,6 +2,9 @@
 # ui.R code
 # ==================================================================================
 
+# Load shiny
+library(shiny)
+
 # Fluid page code
 shinyUI(fluidPage(
   
