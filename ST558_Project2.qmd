@@ -9,6 +9,8 @@ editor_options:
   chunk_output_type: inline
 ---
 
+# 7-8-2024 this code is not totally inline with my app code now due to a bunch of changes I made, however the gist is the same minus the app functionality and flexibility
+
 ## Setup environment
 
 ```{r}

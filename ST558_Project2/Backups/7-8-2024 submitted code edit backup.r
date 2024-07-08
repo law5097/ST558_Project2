@@ -30,17 +30,17 @@ shinyUI(fluidPage(
       h3("About the App"),
       p("This app allows users to:"),
       tags$ul(
-        tags$li("Query the U.S. Government Revenue Collections API"),
-        tags$li("Define the filters to modify the API endpoint and retrieve data"),
-        tags$li("Select columns and rows from the data"),
+        tags$li("Query U.S. Government Revenue Collections API"),
+        tags$li("Define the filters sent to the API"),
+        tags$li("Define the columns returned by the API"),
         tags$li("Download the data as a csv"),
         tags$li("Generate summary plots/statistics based on user selections")
       ),
       p("Please note the following:"),
       tags$ul(
         tags$li("Because this app allows the user to query the API freely, certain combinations of filters may return an error as there is no data that meet the given criteria"),
-        tags$li("Similarly, some combinations of filters may only have data in certain years, certain quarters, etc"),
-        tags$li("There is a 10000 record limit on the API, so if you try to query more than that you'll only get the first 10000 records"),
+        tags$li("Similarly, some combinations of filters may only have data in certain years"),
+        tags$li("There is a 10000 record limit on the API, so if you try to return everything you'll only get the first 10000 records"),
         tags$li("There are some additional variables available in the source data that I did not include in this app, such as the IDs")
       ),
       
@@ -48,19 +48,16 @@ shinyUI(fluidPage(
       p("Here's a brief description of the data from the treasury department and a link to learn more:"),
       tags$ul(
         tags$li("The U.S. Government Revenue Collections dataset provides a daily overview of federal revenue collections such as individual and corporate income tax deposits, customs duties, fees for government service, fines, and loan repayments. These collections can be made through either electronic or non-electronic transactions by mail, internet, bank, or over-the-counter channels."),
-        tags$li("Each row in the data represents the net collections amount for the associated electronic category, channel type, and tax category on the given date"),
-        tags$li(a("https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections", 
-                  href = "https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections", 
-                  target = "_blank"))
+        tags$li("https://fiscaldata.treasury.gov/datasets/revenue-collections-management/u-s-government-revenue-collections")
       ),
       
       h3("About the tabs"),
       tags$ul(
-        tags$li(tags$b("About tab: "), "gives some introductory info about the app, as well as links to resources to learn more about the data"),
+        tags$li("About Tab: gives some introductory info about the app, as well as links to resources to learn more about the data"),
         tags$li(
-          tags$b("Data Selection tab: "), "allows you to query the API in real time with different filters that modify the API endpoint that is sent in the request, any filters you apply here will also determine the data available in the data exploration tab.",
+          "Data Selection Tab: allows you to query the API in real time with different filters that modify the API endpoint that is sent in the request, any filters you apply here will also determine the data available in the data exploration tab.",
           tags$ul(
-            tags$li(tags$b("API & Row Filters (these will modify the API endpoint and filter the data)"),
+            tags$li("Filters",
                     tags$ul(
                       tags$li("Electronic Category Description - Transaction type"),
                       tags$li("Channel Type Description - The collections program reporting the data to the collections information repository (CIR)"),
@@ -70,26 +67,15 @@ shinyUI(fluidPage(
                       tags$li("Number of rows - The # of rows to request from the API")
                     )
             ),
-            tags$li(tags$b("Other Fields (you can select which of these to download as a csv, but they will not modify the API request)"),
+            tags$li("Other Fields",
                     tags$ul(
                       tags$li("Record Date - The date that data was published"),
-                      tags$li("Net Collections Amount - The dollar amount of the transaction"),
-                      tags$li("Record Fiscal Year - The fiscal year associated with record"),
-                      tags$li("Record Fiscal Quarter - The fiscal quarter associated with record"),
-                      tags$li("Record Calendar Quarter - The calendar quarter associated with record date"),
-                      tags$li("Record Calendar Day - The calendar day associated with record date")
+                      tags$li("Net Collections Amount - The dollar amount of transaction")
                     )
             )
           )
         ),
-        tags$li(
-          tags$b("Data Exploration tab: "), 
-          "provides some graphical summaries of the data you selected, the plots that are available will depend on which of the data points you'd like to plot and the histogram can be faceted",
-          tags$ul(
-            tags$li("The collection amounts within the database, as well as the record counts, can be plotted and summarized"),
-            tags$li("Every field except for the record_date can be used as a factor for any of the plots and summaries")
-          )
-        )
+        tags$li("Data Exploration Tab: provides some graphical summaries of the data you selected, the plots that are available will depend on which of the data points you'd like to plot and the histogram can be faceted.")
       )
     ),
     
@@ -128,22 +114,18 @@ shinyUI(fluidPage(
           sliderInput("record_calendar_month", "Calendar Month Range", min = 1, max = 12, value = c(1, 12), step = 1),
           
           # Input for number of rows
-          numericInput("rows", "Number of Rows to Return (max 10000)", value = 1000, min = 1, max = 10000),
+          numericInput("rows", "Number of Rows to Return (max 10000)", value = 500, min = 1, max = 10000),
           
           # Column selection checkboxes
           checkboxGroupInput(
             "columns", 
-            "Select Columns to Download", 
+            "Select Columns", 
             choices = c("Electronic Category Description" = "electronic_category_desc", 
                         "Channel Type Description" = "channel_type_desc", 
                         "Tax Category Description" = "tax_category_desc", 
                         "Record Calendar Year" = "record_calendar_year", 
-                        "Record Calendar Month" = "record_calendar_month",
-                        "Record Fiscal Year" = "record_fiscal_year",
-                        "Record Fiscal Quarter" = "record_fiscal_quarter",
-                        "Record Calendar Quarter" = "record_calendar_quarter",
-                        "Record Calendar Day" = "record_calendar_day"),
-            selected = c("electronic_category_desc", "channel_type_desc", "tax_category_desc", "record_calendar_year", "record_calendar_month", "record_fiscal_year", "record_fiscal_quarter", "record_calendar_quarter", "record_calendar_day")),
+                        "Record Calendar Month" = "record_calendar_month"),
+            selected = c("electronic_category_desc", "channel_type_desc", "tax_category_desc", "record_calendar_year", "record_calendar_month")),
           
           # Message about mandatory columns
           p("Note: 'record_date' and 'net_collections_amt' are always selected."),
@@ -171,35 +153,23 @@ shinyUI(fluidPage(
       fluidRow(
         
         # Variable selection
-        column(
-          4,
-          selectInput("summary_var", "Variable to Summarize", choices = c("Net Collections Amount" = "net_collections_amt", "Count of Records" = "count"))
+        column(4,
+               selectInput("summary_var", "Variable to Summarize", choices = c("Net Collections Amount" = "net_collections_amt", "Count of Records" = "count"))
         ),
         
         # Dynamic UI for plot type, changes based on select variable
-        column(
-          4,
-          uiOutput("plot_type_ui") 
+        column(4,
+               uiOutput("plot_type_ui") 
         ),
         
-        # Selection of variable to partition plots on
-        column(
-          4,
-          selectInput(
-            "contingency_var", 
-            "Variable to Partition by", 
-            choices = c(
-              "Electronic Category Description" = "electronic_category_desc", 
-              "Channel Type Description" = "channel_type_desc", 
-              "Tax Category Description" = "tax_category_desc",
-              "Record Calendar Year" = "record_calendar_year",
-              "Record Calendar Month" = "record_calendar_month",
-              "Record Fiscal Year" = "record_fiscal_year",
-              "Record Fiscal Quarter" = "record_fiscal_quarter",
-              "Record Calendar Quarter" = "record_calendar_quarter",
-              "Record Calendar Day" = "record_calendar_day"
-              )
-            )
+        # Selection of secondary variable
+        column(4,
+               selectInput("contingency_var", "Variable to Partition by", 
+                           choices = c("Electronic Category Description" = "electronic_category_desc", 
+                                       "Channel Type Description" = "channel_type_desc", 
+                                       "Tax Category Description" = "tax_category_desc",
+                                       "Record Calendar Year" = "record_calendar_year",
+                                       "Record Calendar Month" = "record_calendar_month"))
         )
       ),
       
@@ -223,8 +193,8 @@ shinyUI(fluidPage(
         
         # Main drop down
         column(4,
-               h4("Summaries (of the variable you selected to summarize above)"),
-               selectInput("summary_type", "Type of Summary", choices = c("Mean/SD/Variance" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table"))
+               h4("Summary Tables"),
+               selectInput("summary_type", "Type of Summary", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table"))
         ),
         
         # Dynamic drop down dependent on summary selection
@@ -239,7 +209,6 @@ shinyUI(fluidPage(
     )
   )
 ))
-
 
 # ==================================================================================
 # api notes
@@ -262,7 +231,6 @@ shinyUI(fluidPage(
 
 # Load libraries
 library(shiny)
-library(tidyverse)
 library(dplyr)
 library(ggplot2)
 library(scales)
@@ -272,7 +240,7 @@ library(tidyr)
 library(DT)
 library(purrr)
 
-# Define API function (unchanged)
+# Define API function
 get_revenue_collections_data <- function(
     record_date = NULL, 
     electronic_category_desc = NULL, 
@@ -290,18 +258,18 @@ get_revenue_collections_data <- function(
   full_url <- paste0(base_url, end_point)
   
   # baseR URL encoding function - this puts the text in a url friendly format, such as removing spaces
-  url_encode <- function(value){
+  url_encode <- function(value) {
     return(URLencode(as.character(value), reserved = TRUE))
   }
   
   # Function to put the filters in a string format the API expects
-  build_filter <- function(field, value, operator = "eq"){
+  build_filter <- function(field, value, operator = "eq") {
     
     # Check if there's any value 
-    if (!is.null(value) && length(value) > 0){
+    if (!is.null(value) && length(value) > 0) {
       
       # If there's more than a single value passed, wrap it in IN
-      if (length(value) > 1){
+      if (length(value) > 1) {
         return(paste0(field, ":in:(", paste(url_encode(value), collapse = ","), ")"))
       } 
       # Otherwise just paste the single value that was passed with the default operator, eq
@@ -315,11 +283,11 @@ get_revenue_collections_data <- function(
   }
   
   # Function to put the RANGE filters in a string format the API expects
-  build_range_filter <- function(field, values){
-    if (!is.null(values) && length(values) == 2){
+  build_range_filter <- function(field, values) {
+    if (!is.null(values) && length(values) == 2) {
       gte_value <- values[1]
       lte_value <- values[2]
-      if (field == "record_calendar_month"){
+      if (field == "record_calendar_month") {
         gte_value <- sprintf("%02d", as.numeric(gte_value))
         lte_value <- sprintf("%02d", as.numeric(lte_value))
       }
@@ -347,7 +315,7 @@ get_revenue_collections_data <- function(
   filters <- filters[!sapply(filters, is.null)]
   
   # Combine the filters into a single string separated by commas
-  filter_string <- if (length(filters) > 0){
+  filter_string <- if (length(filters) > 0) {
     paste(filters, collapse = ",")
   } else {
     ""
@@ -364,7 +332,7 @@ get_revenue_collections_data <- function(
   url_data <- httr::GET(full_query_url)
   
   # Response check
-  if (status_code(url_data) != 200){
+  if (status_code(url_data) != 200) {
     stop("Failed to retrieve data: ", status_code(url_data), " - ", content(url_data, "text"))
   }
   
@@ -395,11 +363,7 @@ shinyServer(function(input, output, session){
     "Channel Type Description" = "channel_type_desc",
     "Tax Category Description" = "tax_category_desc",
     "Record Calendar Year" = "record_calendar_year",
-    "Record Calendar Month" = "record_calendar_month",
-    "Record Fiscal Year" = "record_fiscal_year",
-    "Record Fiscal Quarter" = "record_fiscal_quarter",
-    "Record Calendar Quarter" = "record_calendar_quarter",
-    "Record Calendar Day" = "record_calendar_day"
+    "Record Calendar Month" = "record_calendar_month"
   )
   
   # Reactive expression to fetch data based on user inputs in the UI using my function get_revenue_collections_data
@@ -415,16 +379,12 @@ shinyServer(function(input, output, session){
       page_size = input$rows
     )
     
-    # Assign data types for plots and handle non-positive values
+    # Convert data to numeric for plots and handle non-finite values
     data <- data |>
       mutate(
         net_collections_amt = as.numeric(net_collections_amt),
         record_calendar_year = as.factor(record_calendar_year),
-        record_calendar_month = as.factor(record_calendar_month),
-        record_fiscal_year = as.factor(record_fiscal_year),
-        record_fiscal_quarter = as.factor(record_fiscal_quarter),
-        record_calendar_quarter = as.factor(record_calendar_quarter),
-        record_calendar_day = as.factor(record_calendar_day)
+        record_calendar_month = as.factor(record_calendar_month)
       ) |>
       filter(!is.na(net_collections_amt) & net_collections_amt > 0)
     
@@ -441,9 +401,7 @@ shinyServer(function(input, output, session){
     
     # Select only the columns chosen by the user + mandatory defaults
     selected_columns <- c("record_date", "net_collections_amt", input$columns)
-    data <- data |> 
-      select(all_of(selected_columns)) |>
-      mutate(net_collections_amt = scales::dollar(net_collections_amt, scale = 1, accuracy = 0.01))
+    data <- data |> select(all_of(selected_columns))
     
     # Print for debugging @@@@@@@@@@@@@@@@@@@@@
     # print(head(data))
@@ -459,14 +417,14 @@ shinyServer(function(input, output, session){
     current_plot_type <- input$plot_type
     
     # Define plots and summaries for net_collections_amt
-    if (input$summary_var == "net_collections_amt"){
+    if (input$summary_var == "net_collections_amt") {
       plot_types <- c("Histogram", "Box plot", "Line plot", "Heat map")
       updateSelectInput(session, "plot_type", choices = plot_types, selected = if (!is.null(current_plot_type) && current_plot_type %in% plot_types) current_plot_type else "Histogram")
       updateSelectInput(session, "summary_type", choices = c("Mean/SD" = "mean_sd", "Percentiles" = "percentiles", "Contingency Table" = "contingency_table"))
     } 
     
     # Define plots and summaries for count data
-    else if (input$summary_var == "count"){
+    else if (input$summary_var == "count") {
       plot_types <- c("Line plot", "Heat map")
       updateSelectInput(session, "plot_type", choices = plot_types, selected = if (!is.null(current_plot_type) && current_plot_type %in% plot_types) current_plot_type else "Heat map")
       updateSelectInput(session, "summary_type", choices = c("Contingency Table" = "contingency_table"))
@@ -485,10 +443,10 @@ shinyServer(function(input, output, session){
   
   # Download handler is a shiny function to enable file downloads, here im outputing as csv
   output$download_data <- downloadHandler(
-    filename = function(){
+    filename = function() {
       paste("revenue_data_", Sys.Date(), ".csv", sep = "")
     },
-    content = function(file){
+    content = function(file) {
       write.csv(fetch_table_data(), file, row.names = FALSE)
     }
   )
@@ -496,13 +454,10 @@ shinyServer(function(input, output, session){
   # Generate dynamic UI for plot type depending on the input variable
   output$plot_type_ui <- renderUI({
     
-    # If the selects net amount show these plots
-    if (input$summary_var == "net_collections_amt"){
+    # If the selection variable is amount, return these plots
+    if (input$summary_var == "net_collections_amt") {
       selectInput("plot_type", "Plot Type", choices = c("Histogram", "Box plot", "Line plot", "Heat map"), selected = "Histogram")
-    } 
-    
-    # Otherwise show these plots for counts
-    else if (input$summary_var == "count"){
+    } else if (input$summary_var == "count") {
       selectInput("plot_type", "Plot Type", choices = c("Line plot", "Heat map"), selected = "Heat map")
     }
   })
@@ -511,7 +466,7 @@ shinyServer(function(input, output, session){
   output$y_axis_var_ui <- renderUI({
     req(input$contingency_var)
     
-    # List of all potential variables for y-axis with clean names, only those that are different from the main one
+    # List of all potential variables for y-axis with clean names
     y_axis_choices <- setdiff(names(clean_names), names(clean_names)[clean_names == input$contingency_var])
     
     selectInput("y_axis_var", "Y-axis Variable", choices = y_axis_choices)
@@ -523,14 +478,14 @@ shinyServer(function(input, output, session){
     # If the user selects contigency table option show the options below
     req(input$summary_type == "contingency_table")
     
-    # List of all potential second variables with clean names, that are NOT selected as variable partition name, DISPLAY NAMES
+    # List of all potential second variables with clean names
     second_var_choices <- setdiff(names(clean_names), input$contingency_var)
     
-    # Define selection box for the optional 2nd variable, this will populate second_var with DISPLAY NAMES
+    # Define selection box
     selectInput("second_var", "Second Variable (Optional)", choices = c("", second_var_choices))
   })
   
-  # Create the plot
+  # Render plot based on user input
   output$plot <- renderPlot({
     
     # Get data
@@ -548,87 +503,67 @@ shinyServer(function(input, output, session){
     date_range_text <- paste(min_date, "to", max_date)
     
     # Define all the different plots a user can see based on the selected variables
-    if (input$summary_var == "count"){
+    if (input$summary_var == "count") {
       data <- data |>
         mutate(count = 1)
     }
     
-    # Set plot theme
-    base_theme <- theme_minimal(base_size = 16) + 
-      theme(
-        axis.text.x = element_text(angle = 0, hjust = 0.5),
-        plot.margin = unit(c(1, 1, 2, 2), "cm"),
-        axis.title.x = element_text(margin = margin(t = 10)),
-        axis.title.y = element_text(margin = margin(r = 10))
-      )
-    
     # Define histogram code
-    if (input$plot_type == "Histogram"){
-      p <- ggplot(data, aes(x = !!sym(input$summary_var), fill = !!sym(input$contingency_var))) +
+    if (input$plot_type == "Histogram") {
+      p <- ggplot(data, aes_string(x = input$summary_var, fill = input$contingency_var)) +
         geom_histogram(bins = 25, alpha = 0.5, position = "stack") +
         labs(title = paste("Histogram of", input$summary_var, "between", date_range_text), x = input$summary_var, y = "Count") +
         scale_x_log10(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
-        base_theme
+        theme_minimal()
       
-      # Add facet option on the user selected variable
-      if (input$facet_histogram){
+      if (input$facet_histogram) {
         p <- p + facet_wrap(as.formula(paste("~", input$contingency_var)))
       }
+      
       print(p)
     } 
     
     # Define box plot code
-    else if (input$plot_type == "Box plot"){
-      ggplot(data, aes(x = !!sym(input$contingency_var), y = !!sym(input$summary_var), fill = !!sym(input$contingency_var))) +
+    else if (input$plot_type == "Box plot") {
+      ggplot(data, aes_string(x = input$contingency_var, y = input$summary_var, fill = input$contingency_var)) +
         geom_boxplot(alpha = 0.5) +
-        labs(title = paste("Box plots of total", input$summary_var, "by", input$contingency_var, "between", date_range_text), x = input$contingency_var, y = input$summary_var) +
+        labs(title = paste("Box plots of", input$summary_var, "by", input$contingency_var, "between", date_range_text), x = input$contingency_var, y = input$summary_var) +
         scale_y_log10(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
-        base_theme +
+        theme_minimal() +
         theme(legend.position = "none")
     } 
     
     # Define line plot code
-    else if (input$plot_type == "Line plot"){
-      
-      # Use month as the x-axis if user decides to plot the year, so the plots pretty/easy to read
-      if (input$contingency_var %in% c("record_calendar_year", "record_fiscal_year")){
-        ggplot(data, aes(x = as.numeric(record_calendar_month), y = !!sym(input$summary_var), color = as.factor(!!sym(input$contingency_var)), group = !!sym(input$contingency_var))) +
+    else if (input$plot_type == "Line plot") {
+      if (input$contingency_var == "record_calendar_year") {
+        ggplot(data, aes(x = as.numeric(record_calendar_month), y = !!sym(input$summary_var), color = as.factor(record_calendar_year), group = record_calendar_year)) +
           geom_line(stat = "summary", fun = sum) +
-          labs(title = paste(input$summary_var, "by Month and", input$contingency_var), x = "Record Month", y = input$summary_var, color = "Year") +
+          labs(title = paste(input$summary_var, "by Month and Year"), x = "Month", y = input$summary_var, color = "Year") +
           scale_x_continuous(breaks = 1:12, labels = month.name) +
           scale_y_continuous(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
-          base_theme
-      } 
-      
-      # Otherwise use the year as the x-axis
-      else {
+          theme_minimal()
+      } else {
         ggplot(data, aes(x = as.factor(record_calendar_year), y = !!sym(input$summary_var), color = !!sym(input$contingency_var), group = !!sym(input$contingency_var))) +
           geom_line(stat = "summary", fun = sum) +
-          labs(title = paste("Line plot of total", input$summary_var, "by Year and", input$contingency_var, "between", date_range_text), x = "Record Year", y = input$summary_var) +
+          labs(title = paste("Line plot of", input$summary_var, "by Year and", input$contingency_var, "between", date_range_text), x = "Year", y = input$summary_var) +
           scale_y_continuous(labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
-          base_theme
+          theme_minimal()
       }
     }
     
     # Define heat map code
-    else if (input$plot_type == "Heat map"){
-      
-      # Check axes
-      req(input$y_axis_var) 
+    else if (input$plot_type == "Heat map") {
       y_axis <- clean_names[input$y_axis_var]
-      req(y_axis)
-      
-      # Generate heat map
       heatmap_data <- data |>
         group_by(!!sym(input$contingency_var), !!sym(y_axis)) |>
         summarize(total_value = sum(!!sym(input$summary_var), na.rm = TRUE), .groups = "drop")
       
-      ggplot(heatmap_data, aes(x = !!sym(input$contingency_var), y = !!sym(y_axis), fill = total_value)) +
+      ggplot(heatmap_data, aes_string(x = input$contingency_var, y = y_axis, fill = "total_value")) +
         geom_tile(alpha = 0.5) +
-        geom_text(aes(label = if (input$summary_var == "net_collections_amt") scales::dollar(total_value) else scales::comma(total_value)), color = "black", size = rel(5), fontface = "bold") +
-        labs(title = paste("Heat map of total", input$summary_var, "by", input$contingency_var, "and", input$y_axis, "between", date_range_text), x = input$contingency_var, y = input$y_axis, fill = input$summary_var) +
-        scale_fill_gradient(low = "#E6FFE3", high = "#7DFC6E", labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
-        base_theme
+        geom_text(aes(label = if (input$summary_var == "net_collections_amt") scales::dollar(total_value) else total_value), color = "black", size = 3) +
+        labs(title = paste("Heat map of", input$summary_var, "by", input$contingency_var, "and", y_axis, "between", date_range_text), x = input$contingency_var, y = y_axis, fill = input$summary_var) +
+        scale_fill_gradient(low = "lightgreen", high = "darkgreen", labels = if (input$summary_var == "net_collections_amt") dollar else identity) +
+        theme_minimal()
     }
   })
   
@@ -639,57 +574,30 @@ shinyServer(function(input, output, session){
     req(input$summary_type)
     req(input$contingency_var)
     
-    # Define output if user selects mean and std dev
-    if (input$summary_type == "mean_sd"){
+    if (input$summary_type == "mean_sd") {
       summary_data <- data |>
         group_by(!!sym(input$contingency_var)) |>
-        summarize(
-          mean_amt = scales::dollar(round(mean(net_collections_amt, na.rm = TRUE), 0)),
-          sd_amt = scales::dollar(round(sd(net_collections_amt, na.rm = TRUE), 0)),
-          var_amt = scales::dollar(round(var(net_collections_amt, na.rm = TRUE), 0))
+        summarise(
+          mean_amt = mean(net_collections_amt, na.rm = TRUE),
+          sd_amt = sd(net_collections_amt, na.rm = TRUE)
         )
-    } 
-    
-    # Define output if user selects percentiles
-    else if (input$summary_type == "percentiles"){
+    } else if (input$summary_type == "percentiles") {
       summary_data <- data |>
         group_by(!!sym(input$contingency_var)) |>
-        summarize(
-          percentile_0 = scales::dollar(round(quantile(net_collections_amt, 0.0, na.rm = TRUE), 0)),
-          percentile_25 = scales::dollar(round(quantile(net_collections_amt, 0.25, na.rm = TRUE), 0)),
-          percentile_50 = scales::dollar(round(median(net_collections_amt, na.rm = TRUE), 0)),
-          percentile_75 = scales::dollar(round(quantile(net_collections_amt, 0.75, na.rm = TRUE), 0)),
-          percentile_100 = scales::dollar(round(quantile(net_collections_amt, 1, na.rm = TRUE), 0))
+        summarise(
+          percentile_25 = quantile(net_collections_amt, 0.25, na.rm = TRUE),
+          percentile_50 = median(net_collections_amt, na.rm = TRUE),
+          percentile_75 = quantile(net_collections_amt, 0.75, na.rm = TRUE),
+          percentile_100 = quantile(net_collections_amt, 1, na.rm = TRUE)
         )
-    } 
-    
-    # Define output if user selects contingency table
-    else if (input$summary_type == "contingency_table"){
-      
-      # Print debugging information @@@@@@@@@@@@@@@@
-      # Your issue here was the internal vs Ui names were not aligning, needed to convert back below
-      #print(paste("contingency_var:", input$contingency_var))
-      #print(paste("second_var:", input$second_var))
-      #print(paste("clean_names:", clean_names[input$second_var]))
-      
-      # Convert display names back to clean names for comparison
-      second_var_internal <- clean_names[input$second_var]
-      
-      # If the user selects a 2nd variable and it is different from the contingency variable, use its levels as column names
-      if (input$second_var != "" && input$contingency_var != second_var_internal) {
+    } else if (input$summary_type == "contingency_table") {
+      if (input$second_var != "") {
         summary_data <- data |>
-          group_by(!!sym(input$contingency_var), !!sym(second_var_internal)) |>
-          summarize(n = n(), .groups = 'drop') |>
-          spread(key = !!sym(second_var_internal), value = n, fill = 0) |>
-          mutate(across(where(is.numeric), comma))  # Format numbers with commas
-      }
-      
-      # Otherwise just return the default counts
-      else {
+          count(!!sym(input$contingency_var), !!sym(clean_names[input$second_var])) |>
+          spread(key = !!sym(clean_names[input$second_var]), value = n, fill = 0)
+      } else {
         summary_data <- data |>
-          group_by(!!sym(input$contingency_var)) |>
-          summarize(n = n(), .groups = 'drop') |>
-          mutate(n = comma(n))  # Format numbers with commas
+          count(!!sym(input$contingency_var))
       }
     }
     
@@ -702,3 +610,6 @@ shinyServer(function(input, output, session){
     updateTabsetPanel(session, "main_tabs", selected = input$tabs)
   })
 })
+
+
+

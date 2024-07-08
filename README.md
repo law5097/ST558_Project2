@@ -6,6 +6,7 @@ This Shiny app allows users to query the U.S. Government Revenue Collections API
 ## Packages Needed
 The following packages are required to run the app:
 - shiny
+- tidyverse
 - dplyr
 - tidyr
 - ggplot2
@@ -20,7 +21,7 @@ To install all the necessary packages, run the following line of code in R:
 
 ## Code to install necessary packages
 ```R
-install.packages(c("shiny", "dplyr", "ggplot2", "scales", "httr", "jsonlite", "tidyr", "DT", "purrr"))
+install.packages(c("shiny", "tidyverse", "dplyr", "tidyr", "ggplot2", "scales", "httr", "jsonlite",  "DT", "purrr"))
 ```
 
 ## Code to run the app in RStudio
