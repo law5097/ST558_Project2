@@ -18,8 +18,6 @@ The following packages are required to run the app:
 
 ## Installation Code
 To install all the necessary packages, run the following line of code in R:
-
-## Code to install necessary packages
 ```R
 install.packages(c("shiny", "tidyverse", "dplyr", "tidyr", "ggplot2", "scales", "httr", "jsonlite",  "DT", "purrr"))
 ```
