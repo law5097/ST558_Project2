@@ -70,7 +70,7 @@ shinyUI(fluidPage(
                       tags$li("Number of rows - The # of rows to request from the API")
                     )
             ),
-            tags$li(tags$b("Other Fields (you can select which of these to download as a csv, but they will not modify the API request)"),
+            tags$li(tags$b("Other Fields (these will not modify the API request)"),
                     tags$ul(
                       tags$li("Record Date - The date that data was published"),
                       tags$li("Net Collections Amount - The dollar amount of the transaction"),
@@ -128,7 +128,7 @@ shinyUI(fluidPage(
           sliderInput("record_calendar_month", "Calendar Month Range", min = 1, max = 12, value = c(1, 12), step = 1),
           
           # Input for number of rows
-          numericInput("rows", "Number of Rows to Return (max 10000)", value = 5000, min = 1, max = 10000),
+          numericInput("rows", "Number of Rows to Return (max 10000)", value = 1000, min = 1, max = 10000),
           
           # Column selection checkboxes
           checkboxGroupInput(
