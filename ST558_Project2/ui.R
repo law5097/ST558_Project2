@@ -84,7 +84,7 @@ shinyUI(fluidPage(
         ),
         tags$li(
           tags$b("Data Exploration tab: "), 
-          "provides some graphical summaries of the data you selected, the plots that are available will depend on which of the data points you'd like to plot and the histogram can be faceted",
+          "provides some graphical summaries of the data you selected, the plots that are available will depend on which of the data points you'd like to plot and all plots can be faceted",
           tags$ul(
             tags$li("The collection amounts within the database, as well as the record counts, can be plotted and summarized"),
             tags$li("Every field except for the record_date can be used as a factor for any of the plots and summaries")
