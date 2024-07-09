@@ -1,5 +1,6 @@
 # ST558 Project 2
 # Lee Worthington
+# Code for the UI portion of my app
 
 # ==================================================================================
 # ui.R code
