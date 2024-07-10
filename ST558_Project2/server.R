@@ -33,7 +33,7 @@ library(tidyr)
 library(DT)
 library(purrr)
 
-# Define API function (unchanged)
+# Define API function
 get_revenue_collections_data <- function(
     record_date = NULL, 
     electronic_category_desc = NULL, 
